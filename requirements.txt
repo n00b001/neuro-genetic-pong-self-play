@@ -1,3 +1,4 @@
+deap
 gym-retro
 numpy
 opencv-python

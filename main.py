@@ -1,8 +1,17 @@
+import datetime
+import glob
+import os
+import pickle
+import random
 import time
 
 import cv2
 import numpy as np
 import retro
+from deap import base, algorithms
+from deap import creator
+from deap import tools
+from scoop import futures
 
 BG_COLOUR = (144, 72, 17)
 BALL_COLOUR = (236, 236, 236)
@@ -30,6 +39,39 @@ ALL_ACTIONS = np.eye(N_CLASSES, dtype=np.int)
 
 TIMEOUT_THRESH = 2_000
 GAMES_TO_PLAY = 10
+
+GENE_SIZE = 5
+IND_PB = 0.2
+SIGMA = 1
+MU = 0
+
+CX_PB = 0.5
+MUT_PB = 0.2
+N_GENS = 40
+
+POPULATION_SIZE = 300
+HALL_OF_FAME_AMOUNT = 3
+
+
+def eval(individual):
+    return evaluate(individual)
+
+
+creator.create("Fitness", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.Fitness)
+
+toolbox = base.Toolbox()
+toolbox.register("map", futures.map)
+
+toolbox.register("attr_float", random.random)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=GENE_SIZE)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
+toolbox.register("select", tools.selBest)
+
+toolbox.register("evaluate", eval)
 
 
 def find_stuff(observation):
@@ -154,5 +196,56 @@ def get_random_action(all_actions):
     return all_actions[np.random.choice(all_actions.shape[0], size=None, replace=False), :]
 
 
+def load_or_create_pop():
+    list_of_files = glob.glob('checkpoints/*')
+    if len(list_of_files) > 0:
+        checkpoint = max(list_of_files, key=os.path.getctime)
+    else:
+        checkpoint = None
+
+    if checkpoint:
+        print("A file name has been given, then load the data from the file")
+        with open(checkpoint, "rb") as cp_file:
+            cp = pickle.load(cp_file)
+        population = cp["population"]
+        random.setstate(cp["rndstate"])
+    else:
+        print("Start a new evolution")
+        population = toolbox.population(n=POPULATION_SIZE)
+    return population
+
+
+def main():
+    population = load_or_create_pop()
+
+    hall_of_fame = tools.HallOfFame(HALL_OF_FAME_AMOUNT)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
+
+    while True:
+        population, log = algorithms.eaSimple(
+            population, toolbox, cxpb=CX_PB, mutpb=MUT_PB, ngen=N_GENS,
+            stats=stats, halloffame=hall_of_fame, verbose=True
+        )
+
+        print(log)
+        print(hall_of_fame)
+
+        save_checkpoint(population)
+
+
+def save_checkpoint(population):
+    cp = dict(
+        population=population,
+        rndstate=random.getstate()
+    )
+    os.makedirs("checkpoints", exist_ok=True)
+    with open(f"checkpoints/checkpoint_{datetime.datetime.now().strftime('%H_%M_%S')}.pkl", "wb") as cp_file:
+        pickle.dump(cp, cp_file)
+
+
 if __name__ == '__main__':
-    evaluate()
+    main()
