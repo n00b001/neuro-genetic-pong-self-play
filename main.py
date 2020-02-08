@@ -189,11 +189,16 @@ def load_or_create_pop():
         print("A file name has been given, then load the data from the file")
         with open(checkpoint, "rb") as cp_file:
             cp = pickle.load(cp_file)
-        population = cp["population"]
+        _population = cp["population"]
+        if len(_population) < POPULATION_SIZE:
+            population = toolbox.population(n=POPULATION_SIZE)
+            _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
+            population[:len(_sorted_population)] = _sorted_population
+        else:
+            population = _population[:POPULATION_SIZE]
         random.setstate(cp["rndstate"])
     else:
         print("Start a new evolution")
-        population = toolbox.population(n=POPULATION_SIZE)
     return population
 
 
