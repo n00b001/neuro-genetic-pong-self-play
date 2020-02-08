@@ -213,9 +213,6 @@ def main():
             stats=stats, halloffame=hall_of_fame, verbose=True
         )
 
-        print(log)
-        # print(hall_of_fame)
-
         save_checkpoint(population)
 
 
