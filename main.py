@@ -6,20 +6,18 @@ import random
 import time
 
 import cv2
-import numpy as np
 import retro
 from deap import base, algorithms
 from deap import creator
 from deap import tools
 from scoop import futures
 
-from config import MU, SIGMA, IND_PB, SCALE_FACTOR, GAME_TOP, GAME_BOTTOM, BALL_COLOUR, LEFT_GUY_COLOUR, \
-    RIGHT_GUY_COLOUR, GENE_SIZE, SCALED_PADDLE_HEIGHT, GAMES_TO_PLAY, BLANK_ACTION, ALL_ACTIONS, RIGHT_ACTION_START, \
-    RIGHT_ACTION_END, LEFT_ACTION_END, FPS, TIMEOUT_THRESH, POPULATION_SIZE, HALL_OF_FAME_AMOUNT, CX_PB, MUT_PB, N_GENS
+from config import *
+from numpy_nn import NeuralNetwork
 
 
 def eval(individual):
-    return evaluate(individual)
+    return evaluate(individual, RENDER)
 
 
 creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -59,7 +57,18 @@ def get_rect(chopped_observation, colour):
     return np.average(indices, axis=1)
 
 
-def inferrance(ball_location, me, enemy, model):
+def inferrance(ball_location, me, enemy, model: NeuralNetwork):
+    if model is not None:
+        normalised_ball_location_x = ball_location[1] / GAME_WIDTH
+        normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
+        normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
+        normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
+        predictions = model.run(
+            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy])
+        inx = np.argmax(predictions)
+        return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
+        return_arr[inx] = 1
+        return return_arr
     ret_val = [0, 0]
     if ball_location[0] < me[0]:
         ret_val[0] = 1
@@ -81,7 +90,14 @@ def keep_within_game_bounds_please(paddle, action):
 
 
 def load_model_from_genes(individual):
-    return None
+    nodes = [4, 4, 2]
+
+    simple_network = NeuralNetwork(
+        nodes=nodes,
+        weights=individual
+    )
+
+    return simple_network
 
 
 def evaluate(individual=None, render=False):
@@ -90,13 +106,13 @@ def evaluate(individual=None, render=False):
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
 
-    model1 = None
-    model2 = load_model_from_genes(individual)
+    left_model = None
+    right_model = load_model_from_genes(individual)
 
     st = time.time()
     total_score = []
     for i in range(GAMES_TO_PLAY):
-        score_info = perform_episode(env, model1, model2, render)
+        score_info = perform_episode(env, left_model, right_model, render)
         total_score.append(score_info)
 
     total_score = np.array(total_score)
@@ -104,17 +120,17 @@ def evaluate(individual=None, render=False):
     right_total_score = sum(total_score[:, 1])
     relative_score = right_total_score - left_total_score
 
-    print(f"{time.time() - st} seconds duration")
-    print(f"left_total_score: {left_total_score}")
-    print(f"right_total_score: {right_total_score}")
-    print(f"relative_score: {relative_score}")
+    # print(f"{time.time() - st} seconds duration")
+    # print(f"left_total_score: {left_total_score}")
+    # print(f"right_total_score: {right_total_score}")
+    # print(f"relative_score: {relative_score}")
 
     if render:
         env.close()
     return relative_score,
 
 
-def perform_episode(env, model1, model2, render):
+def perform_episode(env, left_model, right_model, render):
     last_score = None
     action = np.copy(BLANK_ACTION)
     timeout_counter = 0
@@ -127,9 +143,9 @@ def perform_episode(env, model1, model2, render):
 
         if ball_location is not None:
             if left_location is not None:
-                left_action = inferrance(ball_location, left_location, right_location, model1)
+                left_action = inferrance(ball_location, left_location, right_location, left_model)
             if right_location is not None:
-                right_action = inferrance(ball_location, right_location, left_location, model2)
+                right_action = inferrance(ball_location, right_location, left_location, right_model)
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
         right_action_restricted = keep_within_game_bounds_please(right_location, right_action)
