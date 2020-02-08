@@ -32,7 +32,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
-toolbox.register("select", tools.selBest)
+toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
 
 toolbox.register("evaluate", eval)
 
@@ -119,6 +119,7 @@ def evaluate(individual=None, render=False):
     left_total_score = sum(total_score[:, 0])
     right_total_score = sum(total_score[:, 1])
     relative_score = right_total_score - left_total_score
+    average_score = relative_score / float(GAMES_TO_PLAY)
 
     # print(f"{time.time() - st} seconds duration")
     # print(f"left_total_score: {left_total_score}")
@@ -127,7 +128,7 @@ def evaluate(individual=None, render=False):
 
     if render:
         env.close()
-    return relative_score,
+    return average_score,
 
 
 def perform_episode(env, left_model, right_model, render):
@@ -213,7 +214,7 @@ def main():
         )
 
         print(log)
-        print(hall_of_fame)
+        # print(hall_of_fame)
 
         save_checkpoint(population)
 
