@@ -190,12 +190,12 @@ def load_or_create_pop():
         with open(checkpoint, "rb") as cp_file:
             cp = pickle.load(cp_file)
         _population = cp["population"]
+        _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
         if len(_population) < POPULATION_SIZE:
             population = toolbox.population(n=POPULATION_SIZE)
-            _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
             population[:len(_sorted_population)] = _sorted_population
         else:
-            population = _population[:POPULATION_SIZE]
+            population = _sorted_population[:POPULATION_SIZE]
         random.setstate(cp["rndstate"])
     else:
         print("Start a new evolution")
@@ -233,7 +233,5 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
-    # individual = [
-    #     0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829
-    # ]
+    # individual = [0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829]
     # evaluate(individual=individual, render=True)
