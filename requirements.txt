@@ -1,6 +1,5 @@
 deap
 gym-retro
 numpy
-opencv-python
 tensorflow
 scoop
