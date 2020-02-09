@@ -33,8 +33,9 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("mate", tools.cxBlend, alpha=CX_ALPHA)
 # toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
-toolbox.register("select", tools.selAutomaticEpsilonLexicase, k=TOURN_SIZE)
-# toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
+# toolbox.register("select", tools.selLexicase, k=TOURN_SIZE)
+# toolbox.register("select", tools.selBest, TOURN_SIZE)
+toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
 
 toolbox.register("evaluate", eval)
 
