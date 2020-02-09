@@ -59,15 +59,17 @@ def get_rect(chopped_observation, colour):
     return np.average(indices, axis=1)
 
 
-def inferrance(ball_location, me, enemy, model: NeuralNetwork):
+def inference(ball_location, last_ball_location, me, enemy, model: NeuralNetwork):
     if model is not None:
         normalised_ball_location_x = ball_location[1] / GAME_WIDTH
         normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
+        normalised_last_ball_location_x = last_ball_location[1] / GAME_WIDTH
+        normalised_last_ball_location_y = last_ball_location[0] / GAME_PLAYABLE_HEIGHT
         normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
         normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
         predictions = model.run(
-            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy]
-        )
+            [normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
+             normalised_last_ball_location_y, normalised_enemy, normalised_me])
         inx = np.argmax(predictions)
         return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
         return_arr[inx] = 1
@@ -94,10 +96,8 @@ def keep_within_game_bounds_please(paddle, action):
 
 
 def load_model_from_genes(individual):
-    nodes = [4, 4, 2]
-
     simple_network = NeuralNetwork(
-        nodes=nodes,
+        nodes=NETWORK_SHAPE,
         weights=individual
     )
 
@@ -144,6 +144,7 @@ def perform_episode(env, left_model, right_model, render):
     action = np.copy(BLANK_ACTION)
     timeout_counter = 0.0
     total_time = 0.0
+    last_ball_location = None
     while True:
         observation, reward, is_done, score_info = env.step(action)
 
@@ -151,11 +152,17 @@ def perform_episode(env, left_model, right_model, render):
         left_action = get_random_action(ALL_ACTIONS)
         right_action = get_random_action(ALL_ACTIONS)
 
+        if last_ball_location is None:
+            last_ball_location = ball_location
+
         if ball_location is not None:
             if left_location is not None:
-                left_action = inferrance(ball_location, left_location, right_location, left_model)
+                left_action = inference(ball_location, last_ball_location, left_location, right_location, left_model)
             if right_location is not None:
-                right_action = inferrance(ball_location, right_location, left_location, right_model)
+                right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
+        else:
+            left_action = [0, 0]
+            right_action = [0, 0]
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
         right_action_restricted = keep_within_game_bounds_please(right_location, right_action)
@@ -176,10 +183,8 @@ def perform_episode(env, left_model, right_model, render):
             time.sleep(1.0 / FPS)
 
         if is_done:
-            total_time += timeout_counter
             break
         if timeout_counter > TIMEOUT_THRESH:
-            total_time += timeout_counter
             break
     env.reset()
     # print(score_info)
@@ -247,6 +252,5 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
-    # individual = [1.671090459034915, 0.10054716750346682, -1.0056062353754978, -0.4960988356564555, -1.4085496541674263, -2.177945118639884, 0.9373975698899335, -0.6486598939257695, -6.346342558794901, -1.7583451949875188, -1.4681008071547528, -2.042987027075605, 2.6282372868509194, 2.47831858692556, -0.6360692352321929, -2.616945248289607, 4.517422513138645, -4.002873471041312, 3.6426273544208785, 0.8387411031296219, 0.3012773494860567, -0.6142877571150498, -1.0687166963729968, 0.9996298054768606]
     # individual = [0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829]
     # evaluate(individual=individual, render=True)
