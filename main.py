@@ -68,8 +68,10 @@ def inference(ball_location, last_ball_location, me, enemy, model: NeuralNetwork
         normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
         normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
         predictions = model.run(
-            [normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
-             normalised_last_ball_location_y, normalised_enemy, normalised_me])
+            [
+                normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
+                normalised_last_ball_location_y, normalised_enemy, normalised_me
+            ])
         inx = np.argmax(predictions)
         return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
         return_arr[inx] = 1
