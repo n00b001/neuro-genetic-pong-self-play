@@ -5,7 +5,6 @@ import pickle
 import random
 import time
 
-import cv2
 import retro
 from deap import base, algorithms
 from deap import creator
@@ -40,12 +39,7 @@ hall_of_fame = None
 
 
 def find_stuff(observation):
-    small_img = cv2.resize(
-        observation,
-        (observation.shape[1] // SCALE_FACTOR, observation.shape[0] // SCALE_FACTOR),
-        interpolation=cv2.INTER_NEAREST
-    )
-    chopped_observation = small_img[GAME_TOP // SCALE_FACTOR:GAME_BOTTOM // SCALE_FACTOR, :]
+    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
     ball_location = get_rect(chopped_observation, BALL_COLOUR)
     left_location = get_rect(chopped_observation, LEFT_GUY_COLOUR)
     right_location = get_rect(chopped_observation, RIGHT_GUY_COLOUR)
@@ -92,7 +86,7 @@ def keep_within_game_bounds_please(paddle, action):
     if paddle is not None:
         if paddle[0] < SCALED_PADDLE_HEIGHT:
             action = [0, 1]
-        elif paddle[0] > (((GAME_BOTTOM - GAME_TOP) / SCALE_FACTOR) - SCALED_PADDLE_HEIGHT):
+        elif paddle[0] > ((GAME_BOTTOM - GAME_TOP) - SCALED_PADDLE_HEIGHT):
             action = [1, 0]
     return action
 
@@ -116,11 +110,14 @@ def evaluate(individual=None, render=False):
     for i in range(GAMES_TO_PLAY):
         random_num = random.random()
 
-        if 0 < random_num < 0.4:  # 40% of time we'll use hardcoded AI as enemy
+        # if 0 < random_num < 0.4:  # 40% of time we'll use hardcoded AI as enemy
+        if i == 0:
             left_model = None
-        elif 0.4 < random_num < 0.8:  # 40% of the time we'll use built in AI as enemy
+        # elif 0.4 < random_num < 0.8:  # 40% of the time we'll use built in AI as enemy
+        elif i == 1:
             build_in_ai = True
         else:  # 20% of the time, we'll use one of the hof individuals
+            build_in_ai = False
             if hall_of_fame is None or len(hall_of_fame.items) == 0:
                 left_model = None
             else:
@@ -141,8 +138,7 @@ def evaluate(individual=None, render=False):
     total_score = np.array(total_score)
     left_total_score = sum(total_score[:, 0])
     right_total_score = sum(total_score[:, 1])
-    relative_score = right_total_score - left_total_score
-    average_score = relative_score / float(GAMES_TO_PLAY)
+    average_score = right_total_score / float(GAMES_TO_PLAY)
 
     # print(f"{time.time() - st} seconds duration")
     # print(f"left_total_score: {left_total_score}")
@@ -202,7 +198,12 @@ def perform_episode(env, left_model, right_model, render):
             break
     env.reset()
     # print(score_info)
-    return [score_info["score1"] / (total_time / 1000.0), score_info["score2"] / (total_time / 1000.0)]
+    if score_info["score1"] == score_info["score2"]:
+        return [0, 0]
+
+    left_reward = (score_info["score1"] - score_info["score2"]) / (total_time / 1000.0)
+    right_reward = (score_info["score2"] - score_info["score1"]) / (total_time / 1000.0)
+    return [left_reward, right_reward]
 
 
 def get_random_action(all_actions):
@@ -210,6 +211,7 @@ def get_random_action(all_actions):
 
 
 def load_or_create_pop():
+    global hall_of_fame
     list_of_files = glob.glob('checkpoints/*')
     if len(list_of_files) > 0:
         checkpoint = max(list_of_files, key=os.path.getctime)
@@ -228,6 +230,8 @@ def load_or_create_pop():
         else:
             population = _sorted_population[:POPULATION_SIZE]
         random.setstate(cp["rndstate"])
+        if "hall_of_fame" in cp:
+            hall_of_fame = cp["hall_of_fame"]
     else:
         print("Start a new evolution")
     return population
@@ -257,6 +261,7 @@ def main():
 def save_checkpoint(population):
     cp = dict(
         population=population,
+        hall_of_fame=hall_of_fame,
         rndstate=random.getstate()
     )
     os.makedirs("checkpoints", exist_ok=True)
