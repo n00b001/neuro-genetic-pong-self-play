@@ -66,16 +66,12 @@ def inference(ball_location, last_ball_location, me, enemy, model):
     normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
     predictions = model.run(
         [
-            normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
-            normalised_last_ball_location_y, normalised_me, normalised_enemy
+            normalised_ball_location_x, normalised_ball_location_y,
+            normalised_last_ball_location_x,
+            normalised_last_ball_location_y,
+            normalised_me, normalised_enemy
         ])
-    inx = np.argmax(predictions)
-    if inx == 0:
-        return [1, 0]
-    elif inx == 1:
-        return [0, 1]
-    else:
-        raise Exception("Shouldn't happen")
+    return predictions
 
 
 """:arg action[0] is up, action[1] is down"""
@@ -201,6 +197,8 @@ def perform_episode(env, left_model, right_model, render):
         else:
             left_action = [0, 0]
             right_action = [0, 0]
+
+        last_ball_location = ball_location
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
         right_action_restricted = keep_within_game_bounds_please(right_location, right_action)

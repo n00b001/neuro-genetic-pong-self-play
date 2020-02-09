@@ -132,7 +132,13 @@ class NeuralNetwork:
         input_vector = np.dot(self.weights[-1], input_vector)
         input_vector = activation_function(input_vector)
 
-        return np.squeeze(input_vector)
+        inx = np.argmax(np.squeeze(input_vector))
+        if inx == 0:
+            return [1, 0]
+        elif inx == 1:
+            return [0, 1]
+        else:
+            raise Exception("Shouldn't happen")
 
 
 def main():
