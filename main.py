@@ -122,8 +122,8 @@ def evaluate(individual=None, render=False):
 
     st = time.time()
     total_score = []
-    env = None
     for i in range(GAMES_TO_PLAY):
+        env = None
         if i == 0:
             left_model = HardcodedAi()
         elif i == 1:
