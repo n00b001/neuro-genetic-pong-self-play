@@ -61,9 +61,12 @@ def inference(ball_location, last_ball_location, me, model: NeuralNetwork):
     if model is not None:
         normalised_ball_location_x = ball_location[1] / GAME_WIDTH
         normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
+        normalised_last_ball_location_x = last_ball_location[1] / GAME_WIDTH
+        normalised_last_ball_location_y = last_ball_location[0] / GAME_PLAYABLE_HEIGHT
         normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
         predictions = model.run(
-            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy])
+            [normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
+             normalised_last_ball_location_y, normalised_me])
         inx = np.argmax(predictions)
         return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
         return_arr[inx] = 1
@@ -89,10 +92,8 @@ def keep_within_game_bounds_please(paddle, action):
 
 
 def load_model_from_genes(individual):
-    nodes = [4, 4, 2]
-
     simple_network = NeuralNetwork(
-        nodes=nodes,
+        nodes=NETWORK_SHAPE,
         weights=individual
     )
 
@@ -101,7 +102,10 @@ def load_model_from_genes(individual):
 
 def evaluate(individual=None, render=False):
     # env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
-    env = retro.make('Pong-Atari2600')
+    if random.random() > 0.5:
+        env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+    else:
+        env = retro.make('Pong-Atari2600')
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
 
@@ -134,6 +138,7 @@ def perform_episode(env, left_model, right_model, render):
     last_score = None
     action = np.copy(BLANK_ACTION)
     timeout_counter = 0
+    last_ball_location = None
     while True:
         observation, reward, is_done, score_info = env.step(action)
 
@@ -141,11 +146,17 @@ def perform_episode(env, left_model, right_model, render):
         left_action = get_random_action(ALL_ACTIONS)
         right_action = get_random_action(ALL_ACTIONS)
 
+        if last_ball_location is None:
+            last_ball_location = ball_location
+
         if ball_location is not None:
             if left_location is not None:
-                left_action = inferrance(ball_location, left_location, right_location, left_model)
+                left_action = inference(ball_location, last_ball_location, left_location, left_model)
             if right_location is not None:
-                right_action = inferrance(ball_location, right_location, left_location, right_model)
+                right_action = inference(ball_location, last_ball_location, right_location, right_model)
+        else:
+            left_action = [0, 0]
+            right_action = [0, 0]
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
         right_action_restricted = keep_within_game_bounds_please(right_location, right_action)
@@ -184,6 +195,7 @@ def load_or_create_pop():
     else:
         checkpoint = None
 
+    population = toolbox.population(n=POPULATION_SIZE)
     if checkpoint:
         print("A file name has been given, then load the data from the file")
         with open(checkpoint, "rb") as cp_file:
@@ -191,7 +203,6 @@ def load_or_create_pop():
         _population = cp["population"]
         _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
         if len(_population) < POPULATION_SIZE:
-            population = toolbox.population(n=POPULATION_SIZE)
             population[:len(_sorted_population)] = _sorted_population
         else:
             population = _sorted_population[:POPULATION_SIZE]
@@ -232,5 +243,5 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
-    # individual = [0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829]
+    # individual = [2.545363772443644, -0.021478489313068172, -0.15366547839839745, 2.2505708563781006, -1.2229583072149612, 2.370732127380614, 1.2834865567640077, -2.981773714254297, -0.3856860847071438, -2.8513748632243803, -0.5535750224838425, -0.24154988683950307, 0.07362185729879138, -3.2389678818866274, -0.28246083169684616, -2.086782570362913, 1.7096264968292458, 1.493310535766563, 0.1698582390357819, -0.6405005313525163, -0.4922482492391475, 4.1526750716036585, -0.2803448936488474, 1.5037531566763553, -0.20685571536776814, -1.7921798717841417, 4.44907299301761, 0.4570858980011814, 1.9739009883039436, -0.916882354199865, -0.6480184564861109, 0.1309919863704414]
     # evaluate(individual=individual, render=True)
