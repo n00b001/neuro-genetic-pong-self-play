@@ -57,12 +57,11 @@ def get_rect(chopped_observation, colour):
     return np.average(indices, axis=1)
 
 
-def inferrance(ball_location, me, enemy, model: NeuralNetwork):
+def inference(ball_location, last_ball_location, me, model: NeuralNetwork):
     if model is not None:
         normalised_ball_location_x = ball_location[1] / GAME_WIDTH
         normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
         normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
-        normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
         predictions = model.run(
             [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy])
         inx = np.argmax(predictions)
