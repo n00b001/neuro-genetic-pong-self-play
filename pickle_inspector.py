@@ -1,4 +1,12 @@
-from main import load_or_create_pop
+from main import load_population, evaluate
+
+
+def main():
+    population = load_population()
+
+    individual = population[0]
+    evaluate(individual=individual, render=True)
+
 
 if __name__ == '__main__':
-    load_or_create_pop()
+    main()

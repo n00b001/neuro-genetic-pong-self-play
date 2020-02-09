@@ -30,9 +30,11 @@ toolbox.register("attr_float", random.random)
 toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=GENE_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mate", tools.cxBlend, alpha=CX_ALPHA)
+# toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
-toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
+toolbox.register("select", tools.selAutomaticEpsilonLexicase, k=TOURN_SIZE)
+# toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
 
 toolbox.register("evaluate", eval)
 
@@ -85,6 +87,7 @@ def load_model_from_genes(individual):
     simple_network = NeuralNetwork(
         nodes=NETWORK_SHAPE,
         weights=individual,
+        bias=True
     )
 
     return simple_network
@@ -210,6 +213,8 @@ def perform_episode(env, left_model, right_model, render):
             env.render()
             time.sleep(1.0 / FPS)
 
+        if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
+            break
         if is_done:
             break
         if timeout_counter > TIMEOUT_THRESH:
@@ -228,39 +233,49 @@ def get_random_action(all_actions):
     return all_actions[np.random.choice(all_actions.shape[0], size=None, replace=False), :]
 
 
-def load_or_create_pop():
+def load_population():
     global hall_of_fame
     list_of_files = glob.glob('checkpoints/*')
     if len(list_of_files) > 0:
         checkpoint = max(list_of_files, key=os.path.getctime)
-    else:
-        checkpoint = None
-
-    population = toolbox.population(n=POPULATION_SIZE)
-    if checkpoint:
         print("A file name has been given, then load the data from the file")
         with open(checkpoint, "rb") as cp_file:
             cp = pickle.load(cp_file)
         _population = cp["population"]
         _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
-        if len(_population) < POPULATION_SIZE:
-            population[:len(_sorted_population)] = _sorted_population
-        else:
-            population = _sorted_population[:POPULATION_SIZE]
         random.setstate(cp["rndstate"])
         if "hall_of_fame" in cp:
             hall_of_fame = cp["hall_of_fame"]
+        return _sorted_population
     else:
-        print("Start a new evolution")
-    return population
+        return None
+
+
+def load_or_create_pop():
+    global hall_of_fame
+
+    population = load_population()
+
+    loaded_pop_size = 0
+    if population is not None:
+        loaded_pop_size = len(population)
+
+    if loaded_pop_size >= POPULATION_SIZE:
+        return population[:POPULATION_SIZE]
+
+    _population = toolbox.population(n=(POPULATION_SIZE - loaded_pop_size))
+
+    if loaded_pop_size == 0:
+        return _population
+    return population + _population
 
 
 def main():
     global hall_of_fame
 
+    hall_of_fame = tools.HallOfFame(HALL_OF_FAME_AMOUNT)
     population = load_or_create_pop()
 
-    hall_of_fame = tools.HallOfFame(HALL_OF_FAME_AMOUNT)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
     stats.register("std", np.std)
@@ -289,10 +304,5 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
-    # individual = [3.0982564618623556, 0.3456392740138593, 0.14082890678241, 1.5486152183076243, 1.688957528292551,
-    #               -0.41022947331564297, 1.9202332819872239, -0.8111005037794137, -2.1761033755921253,
-    #               0.0816563985669917, 1.237618565571571, 3.8602528621388834, 0.5584348334191216, 0.7207469622503221,
-    #               -0.736499399144851, -2.0237233647139488, -0.08334005559341429, -0.8852364356431746,
-    #               -1.2334751501020085, -1.623317909185873, 1.3730356225306743, -0.8823778108129245, 0.5819496473264711,
-    #               1.1509894218336085, -2.291795897101383, 0.7258951582377213, 2.573366867768538, -0.07424030006561644]
+    # individual = [3.0982564618623556, 0.3456392740138593, 0.14082890678241, 1.5486152183076243, 1.688957528292551, -0.41022947331564297, 1.9202332819872239, -0.8111005037794137, -2.1761033755921253, 0.0816563985669917, 1.237618565571571, 3.8602528621388834, 0.5584348334191216, 0.7207469622503221, -0.736499399144851, -2.0237233647139488, -0.08334005559341429, -0.8852364356431746, -1.2334751501020085, -1.623317909185873, 1.3730356225306743, -0.8823778108129245, 0.5819496473264711, 1.1509894218336085, -2.291795897101383, 0.7258951582377213, 2.573366867768538, -0.07424030006561644]
     # evaluate(individual=individual, render=True)

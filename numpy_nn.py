@@ -40,7 +40,7 @@ class NeuralNetwork:
 
         self.nodes = nodes
         self.learning_rate = learning_rate
-        self.bias = bias
+        self.bias = 1 if bias else 0
         if weights is None:
             self.weights = self.create_random_weight_matrices()
         else:
@@ -48,19 +48,22 @@ class NeuralNetwork:
 
     def load_weights(self, weights):
         index = 0
+
         _weights = []
         for i in range(len(self.nodes) - 1):
             input_node_amount = self.nodes[i]
             output_node_amount = self.nodes[i + 1]
 
-            number_of_numbers_to_take = input_node_amount * output_node_amount
-            matrix_weights = np.array(weights[index:index + number_of_numbers_to_take])
-            matrix_weights = matrix_weights.reshape(output_node_amount, input_node_amount)
+            number_of_numbers_number_to_take = (input_node_amount + self.bias) * output_node_amount
+            matrix_weights = np.array(weights[index:index + number_of_numbers_number_to_take])
+            # matrix_weights = matrix_weights.reshape(input_node_amount + self.bias, output_node_amount)
+            matrix_weights = matrix_weights.reshape(output_node_amount, input_node_amount + self.bias)
             _weights.append(matrix_weights)
-            index += number_of_numbers_to_take
+            index += number_of_numbers_number_to_take
         if index != len(weights):
             print(f"Not all weights loaded!\n Loaded: {index} weights")
-        return np.array(_weights)
+        # return np.array(_weights)
+        return _weights
 
     def create_random_weight_matrices(self):
         """ A method to initialize the weight matrices of the neural
@@ -73,7 +76,7 @@ class NeuralNetwork:
             rad = 1 / np.sqrt(self.nodes[i] + bias_node)
             X = truncated_normal(mean=0, sd=1, low=-rad, upp=rad)
             weights.append(X.rvs((self.nodes[i + 1], self.nodes[i] + bias_node)))
-        return np.array(weights)
+        return weights
 
     def train(self, input_vector, target_vector):
         # input_vector and target_vector can be tuple, list or ndarray
@@ -116,15 +119,19 @@ class NeuralNetwork:
 
         if self.bias:
             # adding bias node to the end of the inpuy_vector
-            input_vector = np.concatenate((input_vector, [1]))
+            input_vector = np.concatenate((input_vector, [self.bias]))
         input_vector = np.array(input_vector, ndmin=2).T
 
-        for w in self.weights:
+        for w in self.weights[:-1]:
             input_vector = np.dot(w, input_vector)
             input_vector = activation_function(input_vector)
 
             if self.bias:
                 input_vector = np.concatenate((input_vector, [[self.bias]]))
+
+        input_vector = np.dot(self.weights[-1], input_vector)
+        input_vector = activation_function(input_vector)
+
         return np.squeeze(input_vector)
 
 
