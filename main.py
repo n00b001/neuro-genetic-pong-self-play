@@ -70,7 +70,7 @@ def inference(ball_location, last_ball_location, me, enemy, model: NeuralNetwork
         predictions = model.run(
             [
                 normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
-                normalised_last_ball_location_y, normalised_me
+                normalised_last_ball_location_y, normalised_me, normalised_enemy
             ])
         inx = np.argmax(predictions)
         return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
@@ -100,7 +100,7 @@ def keep_within_game_bounds_please(paddle, action):
 def load_model_from_genes(individual):
     simple_network = NeuralNetwork(
         nodes=NETWORK_SHAPE,
-        weights=individual
+        weights=individual,
     )
 
     return simple_network
@@ -112,14 +112,19 @@ def evaluate(individual=None, render=False):
     st = time.time()
     total_score = []
     build_in_ai = False
+    left_model = None
     for i in range(GAMES_TO_PLAY):
-        if random.random() < 0.3 or (hall_of_fame is None or len(hall_of_fame.items) == 0):
+        random_num = random.random()
+
+        if 0 < random_num < 0.4:  # 40% of time we'll use hardcoded AI as enemy
             left_model = None
-        elif random.random() < 0.5:
+        elif 0.4 < random_num < 0.8:  # 40% of the time we'll use built in AI as enemy
             build_in_ai = True
-            left_model = None
-        else:
-            left_model = load_model_from_genes(random.choice(hall_of_fame.items))
+        else:  # 20% of the time, we'll use one of the hof individuals
+            if hall_of_fame is None or len(hall_of_fame.items) == 0:
+                left_model = None
+            else:
+                left_model = load_model_from_genes(random.choice(hall_of_fame.items))
 
         if not build_in_ai:
             env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
@@ -197,7 +202,7 @@ def perform_episode(env, left_model, right_model, render):
             break
     env.reset()
     # print(score_info)
-    return [score_info["score1"] / total_time, score_info["score2"] / total_time]
+    return [score_info["score1"] / (total_time / 1000.0), score_info["score2"] / (total_time / 1000.0)]
 
 
 def get_random_action(all_actions):
@@ -260,6 +265,17 @@ def save_checkpoint(population):
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     # individual = [2.545363772443644, -0.021478489313068172, -0.15366547839839745, 2.2505708563781006, -1.2229583072149612, 2.370732127380614, 1.2834865567640077, -2.981773714254297, -0.3856860847071438, -2.8513748632243803, -0.5535750224838425, -0.24154988683950307, 0.07362185729879138, -3.2389678818866274, -0.28246083169684616, -2.086782570362913, 1.7096264968292458, 1.493310535766563, 0.1698582390357819, -0.6405005313525163, -0.4922482492391475, 4.1526750716036585, -0.2803448936488474, 1.5037531566763553, -0.20685571536776814, -1.7921798717841417, 4.44907299301761, 0.4570858980011814, 1.9739009883039436, -0.916882354199865, -0.6480184564861109, 0.1309919863704414]
-    # evaluate(individual=individual, render=True)
+    # individual = [1.068020735845282, -0.3837447566977138, -1.0151046852036982, 0.6173748399639936, -0.24544238807571173, 1.7516867117389516, 3.323259961305144, -0.6833667271955816, -1.0844893680411845, 1.2182520395868042, -0.533879507175848, 3.5806929515214545, 0.32603860425215625, -0.14951238268445488, 0.6838495947305132, 0.46071333975996875, 0.8452268762629406, -0.3938545667368471, -0.32513719831913457, 4.601566605380813, 2.02284407743116, -2.846197358107322, 0.9722175954189243, 2.083247239594264, 2.516504059222358, 1.5361163299530791, 1.1326886432554684, 3.1430804027681605, -2.231738100436152, -0.6033534013225744, -1.5450442710869425, 0.8770036601130415, -0.15925316580178706, -0.31731699126486645, 2.610097450772107, -0.9320634828498745, 1.306111794921446, -1.1614864771830602, 0.6985574046963744, 2.2447804191077, 0.8335905141691349, -0.519506612813645, -0.5652313419972996, 2.246817129399486, -2.0005944713440664, -2.13570941596382, -0.3756279603673911, -0.8107836283944765, -1.2226955399360149, -1.2285193711916933, -1.391042148952684, -0.013968278620536179, -0.6354772524643483, 1.8806809661509496, 1.8044597773284012, 2.869460977590903]
+    individual = [-0.7045202405715212, -0.6008990769410288, -0.6465487803498704, 3.72254501207871, 11.662591769226681,
+                  7.286295970365752, 0.3055821312996996, -4.3094516893099515, -2.4567551342813614, -2.902325439446411,
+                  -1.5324860245208896, 2.700125800335014, -2.231095034366262, -5.01830524838203, 3.2037271893351718,
+                  1.1974324837177017, 5.148555207855356, 7.665746326690054, 4.550916833158775, -0.21529754902717024,
+                  1.855545447145384, 10.220527070481713, -3.9641611516878488, -2.4698952671888033, 0.7135973371420858,
+                  -0.1447860773844818, 3.657726460417585, 2.103004754770878, -2.0478831192986244, -5.1412366650336105,
+                  4.654713600369238, -0.5952741867650442, 4.609814431154118, 3.328180644339965, -0.2753887395989051,
+                  1.011678140199655, -0.3986237062078002, 2.147880868013523, 0.5000535470903792, -0.26750512772333085,
+                  -4.956726076811883, -1.052104549416598, -6.912910915623136, 2.005566742267521, -0.04425203005992842,
+                  -2.31810066108435]
+    evaluate(individual=individual, render=True)
