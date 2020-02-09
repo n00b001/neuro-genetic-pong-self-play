@@ -69,7 +69,13 @@ def inference(ball_location, last_ball_location, me, enemy, model):
             normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
             normalised_last_ball_location_y, normalised_me, normalised_enemy
         ])
-    return np.rint(predictions)
+    inx = np.argmax(predictions)
+    if inx == 0:
+        return [1, 0]
+    elif inx == 1:
+        return [0, 1]
+    else:
+        raise Exception("Shouldn't happen")
 
 
 """:arg action[0] is up, action[1] is down"""

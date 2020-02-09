@@ -32,8 +32,8 @@ IND_PB = 0.9
 SIGMA = 0.9
 MU = 0
 
-CX_PB = 0.5
-CX_ALPHA = 0.5
+CX_PB = 0.9
+CX_ALPHA = 0.9
 MUT_PB = 0.9
 
 # OFTEN CHANGED
