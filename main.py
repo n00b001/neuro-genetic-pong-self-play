@@ -54,30 +54,19 @@ def get_rect(chopped_observation, colour):
     return np.average(indices, axis=1)
 
 
-def inference(ball_location, last_ball_location, me, enemy, model: NeuralNetwork):
-    if model is not None:
-        normalised_ball_location_x = ball_location[1] / GAME_WIDTH
-        normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
-        normalised_last_ball_location_x = last_ball_location[1] / GAME_WIDTH
-        normalised_last_ball_location_y = last_ball_location[0] / GAME_PLAYABLE_HEIGHT
-        normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
-        normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
-        predictions = model.run(
-            [
-                normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
-                normalised_last_ball_location_y, normalised_me
-            ])
-        return np.rint(predictions)
-        # return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
-        # return_arr[inx] = 1
-        # return return_arr
-
-    ret_val = [0, 0]
-    if ball_location[0] < me[0]:
-        ret_val[0] = 1
-    elif ball_location[0] > me[0]:
-        ret_val[1] = 1
-    return ret_val
+def inference(ball_location, last_ball_location, me, enemy, model):
+    normalised_ball_location_x = ball_location[1] / GAME_WIDTH
+    normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
+    normalised_last_ball_location_x = last_ball_location[1] / GAME_WIDTH
+    normalised_last_ball_location_y = last_ball_location[0] / GAME_PLAYABLE_HEIGHT
+    normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
+    normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
+    predictions = model.run(
+        [
+            normalised_ball_location_x, normalised_ball_location_y, normalised_last_ball_location_x,
+            normalised_last_ball_location_y, normalised_me, normalised_enemy
+        ])
+    return np.rint(predictions)
 
 
 """:arg action[0] is up, action[1] is down"""
@@ -101,33 +90,55 @@ def load_model_from_genes(individual):
     return simple_network
 
 
+class HardcodedAi:
+    def run(self, input_vector):
+        ret_val = [0, 0]
+        if input_vector[1] < input_vector[4]:
+            ret_val[0] = 1
+        elif input_vector[1] > input_vector[4]:
+            ret_val[1] = 1
+        return ret_val
+
+
+class ScoreHardcodedAi:
+    def __int__(self):
+        self.score_info = {}
+
+    def set_score(self, score_info):
+        self.score_info = score_info
+
+    def run(self, input_vector):
+        ret_val = [0, 0]
+        if self.score_info["score1"] <= self.score_info["score2"]:
+            if input_vector[1] < input_vector[4]:
+                ret_val[0] = 1
+            elif input_vector[1] > input_vector[4]:
+                ret_val[1] = 1
+        return ret_val
+
+
 def evaluate(individual=None, render=False):
     right_model = load_model_from_genes(individual)
 
     st = time.time()
     total_score = []
-    build_in_ai = False
-    left_model = None
     for i in range(GAMES_TO_PLAY):
-        random_num = random.random()
-
-        # if 0 < random_num < 0.4:  # 40% of time we'll use hardcoded AI as enemy
+        env = None
         if i == 0:
-            left_model = None
-        # elif 0.4 < random_num < 0.8:  # 40% of the time we'll use built in AI as enemy
+            left_model = HardcodedAi()
         elif i == 1:
-            build_in_ai = True
-        else:  # 20% of the time, we'll use one of the hof individuals
-            build_in_ai = False
+            left_model = HardcodedAi()
+            env = retro.make('Pong-Atari2600')
+        elif i == 2:
+            left_model = ScoreHardcodedAi()
+        else:
             if hall_of_fame is None or len(hall_of_fame.items) == 0:
-                left_model = None
+                left_model = HardcodedAi()
             else:
                 left_model = load_model_from_genes(random.choice(hall_of_fame.items))
-
-        if not build_in_ai:
+        if env is None:
             env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
-        else:
-            env = retro.make('Pong-Atari2600')
+
         env.use_restricted_actions = retro.Actions.FILTERED
         env.reset()
 
@@ -158,6 +169,8 @@ def perform_episode(env, left_model, right_model, render):
     last_ball_location = None
     while True:
         observation, reward, is_done, score_info = env.step(action)
+        if type(left_model) == ScoreHardcodedAi:
+            left_model.set_score(score_info)
 
         ball_location, left_location, right_location = find_stuff(observation)
         left_action = get_random_action(ALL_ACTIONS)
@@ -276,5 +289,10 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
-    # individual = [3.0982564618623556, 0.3456392740138593, 0.14082890678241, 1.5486152183076243, 1.688957528292551, -0.41022947331564297, 1.9202332819872239, -0.8111005037794137, -2.1761033755921253, 0.0816563985669917, 1.237618565571571, 3.8602528621388834, 0.5584348334191216, 0.7207469622503221, -0.736499399144851, -2.0237233647139488, -0.08334005559341429, -0.8852364356431746, -1.2334751501020085, -1.623317909185873, 1.3730356225306743, -0.8823778108129245, 0.5819496473264711, 1.1509894218336085, -2.291795897101383, 0.7258951582377213, 2.573366867768538, -0.07424030006561644]
+    # individual = [3.0982564618623556, 0.3456392740138593, 0.14082890678241, 1.5486152183076243, 1.688957528292551,
+    #               -0.41022947331564297, 1.9202332819872239, -0.8111005037794137, -2.1761033755921253,
+    #               0.0816563985669917, 1.237618565571571, 3.8602528621388834, 0.5584348334191216, 0.7207469622503221,
+    #               -0.736499399144851, -2.0237233647139488, -0.08334005559341429, -0.8852364356431746,
+    #               -1.2334751501020085, -1.623317909185873, 1.3730356225306743, -0.8823778108129245, 0.5819496473264711,
+    #               1.1509894218336085, -2.291795897101383, 0.7258951582377213, 2.573366867768538, -0.07424030006561644]
     # evaluate(individual=individual, render=True)
