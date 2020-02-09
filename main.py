@@ -36,6 +36,8 @@ toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
 
 toolbox.register("evaluate", eval)
 
+hall_of_fame = None
+
 
 def find_stuff(observation):
     small_img = cv2.resize(
@@ -64,11 +66,13 @@ def inferrance(ball_location, me, enemy, model: NeuralNetwork):
         normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
         normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
         predictions = model.run(
-            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy])
+            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy]
+        )
         inx = np.argmax(predictions)
         return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
         return_arr[inx] = 1
         return return_arr
+
     ret_val = [0, 0]
     if ball_location[0] < me[0]:
         ret_val[0] = 1
@@ -101,17 +105,21 @@ def load_model_from_genes(individual):
 
 
 def evaluate(individual=None, render=False):
-    # env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
-    env = retro.make('Pong-Atari2600')
+    env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+    # env = retro.make('Pong-Atari2600')
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
 
-    left_model = None
     right_model = load_model_from_genes(individual)
 
     st = time.time()
     total_score = []
     for i in range(GAMES_TO_PLAY):
+        if hall_of_fame is None or len(hall_of_fame.items) == 0:
+            left_model = None
+        else:
+            left_model = load_model_from_genes(random.choice(hall_of_fame.items))
+
         score_info = perform_episode(env, left_model, right_model, render)
         total_score.append(score_info)
 
@@ -134,7 +142,8 @@ def evaluate(individual=None, render=False):
 def perform_episode(env, left_model, right_model, render):
     last_score = None
     action = np.copy(BLANK_ACTION)
-    timeout_counter = 0
+    timeout_counter = 0.0
+    total_time = 0.0
     while True:
         observation, reward, is_done, score_info = env.step(action)
 
@@ -156,9 +165,10 @@ def perform_episode(env, left_model, right_model, render):
 
         if last_score is not None:
             if last_score == score_info:
-                timeout_counter += 1
+                timeout_counter += 1.0
             else:
-                timeout_counter = 0
+                total_time += timeout_counter
+                timeout_counter = 0.0
         last_score = score_info
 
         if render:
@@ -166,12 +176,14 @@ def perform_episode(env, left_model, right_model, render):
             time.sleep(1.0 / FPS)
 
         if is_done:
+            total_time += timeout_counter
             break
         if timeout_counter > TIMEOUT_THRESH:
+            total_time += timeout_counter
             break
     env.reset()
     # print(score_info)
-    return [score_info["score1"], score_info["score2"]]
+    return [score_info["score1"] / total_time, score_info["score2"] / total_time]
 
 
 def get_random_action(all_actions):
@@ -185,6 +197,7 @@ def load_or_create_pop():
     else:
         checkpoint = None
 
+    population = toolbox.population(n=POPULATION_SIZE)
     if checkpoint:
         print("A file name has been given, then load the data from the file")
         with open(checkpoint, "rb") as cp_file:
@@ -192,7 +205,6 @@ def load_or_create_pop():
         _population = cp["population"]
         _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
         if len(_population) < POPULATION_SIZE:
-            population = toolbox.population(n=POPULATION_SIZE)
             population[:len(_sorted_population)] = _sorted_population
         else:
             population = _sorted_population[:POPULATION_SIZE]
@@ -203,6 +215,8 @@ def load_or_create_pop():
 
 
 def main():
+    global hall_of_fame
+
     population = load_or_create_pop()
 
     hall_of_fame = tools.HallOfFame(HALL_OF_FAME_AMOUNT)
@@ -233,5 +247,6 @@ def save_checkpoint(population):
 
 if __name__ == '__main__':
     main()
+    # individual = [1.671090459034915, 0.10054716750346682, -1.0056062353754978, -0.4960988356564555, -1.4085496541674263, -2.177945118639884, 0.9373975698899335, -0.6486598939257695, -6.346342558794901, -1.7583451949875188, -1.4681008071547528, -2.042987027075605, 2.6282372868509194, 2.47831858692556, -0.6360692352321929, -2.616945248289607, 4.517422513138645, -4.002873471041312, 3.6426273544208785, 0.8387411031296219, 0.3012773494860567, -0.6142877571150498, -1.0687166963729968, 0.9996298054768606]
     # individual = [0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829]
     # evaluate(individual=individual, render=True)
