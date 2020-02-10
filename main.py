@@ -129,25 +129,31 @@ def evaluate(individual=None, render=False):
     st = time.time()
     total_score = []
     right_score_multiplier = 1
-    for i in range(GAMES_TO_PLAY):
+    left_model = HardcodedAi()
+    for i in range(3, GAMES_TO_PLAY):
         env = None
         if i == 0:
-            left_model = HardcodedAi()
+            # left_model = HardcodedAi()
+            pass
         elif i == 1:
-            left_model = HardcodedAi()
             env = retro.make('Pong-Atari2600')
         elif i == 2:
             left_model = ScoreHardcodedAi()
         else:
-            if hall_of_fame is None or len(hall_of_fame.items) == 0:
-                left_model = HardcodedAi()
+            hall_of_fame_items = hall_of_fame.items
+            if hall_of_fame is None or len(hall_of_fame_items) == 0:
+                # left_model = HardcodedAi()
+                pass
             else:
-                while True:
-                    random_hall_of_famer = random.choice(hall_of_fame.items)
-                    if random_hall_of_famer.valid:
-                        right_score_multiplier = random_hall_of_famer.fitness.values[0]
-                        break
-                left_model = load_model_from_genes(list(random_hall_of_famer))
+                random.shuffle(hall_of_fame_items)
+                for hall_of_famer in hall_of_fame_items:
+                    if hasattr(hall_of_famer, "fitness"):
+                        if hasattr(hall_of_famer.fitness, "valid"):
+                            if hall_of_famer.fitness.valid:
+                                right_score_multiplier = hall_of_famer.fitness.values[0]
+                                left_model = load_model_from_genes(list(hall_of_famer))
+                                break
+                print("")
         if env is None:
             env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
