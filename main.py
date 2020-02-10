@@ -20,28 +20,6 @@ def eval(individual):
     return evaluate(individual, RENDER)
 
 
-creator.create("Fitness", base.Fitness, weights=(1.0,))
-creator.create("Individual", list, fitness=creator.Fitness)
-
-toolbox = base.Toolbox()
-toolbox.register("map", futures.map)
-
-toolbox.register("attr_float", random.random)
-toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=GENE_SIZE)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-toolbox.register("mate", tools.cxBlend, alpha=CX_ALPHA)
-# toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
-# toolbox.register("select", tools.selLexicase, k=TOURN_SIZE)
-# toolbox.register("select", tools.selBest, TOURN_SIZE)
-toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
-
-toolbox.register("evaluate", eval)
-
-hall_of_fame = None
-
-
 def find_stuff(observation):
     chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
     ball_location = get_rect(chopped_observation, BALL_COLOUR)
@@ -90,7 +68,7 @@ def load_model_from_genes(individual):
     simple_network = NeuralNetwork(
         nodes=NETWORK_SHAPE,
         weights=individual,
-        bias=True
+        bias=BIAS
     )
 
     return simple_network
@@ -123,52 +101,57 @@ class ScoreHardcodedAi:
         return ret_val
 
 
+def load_from_hall_of_fame():
+    left_model = None
+    right_score_multiplier = 1
+    hall_of_fame_items = hall_of_fame.items
+    if len(hall_of_fame_items) != 0:
+        random.shuffle(hall_of_fame_items)
+        for hall_of_famer in hall_of_fame_items:
+            # if hasattr(hall_of_famer, "fitness"):
+            #     if hasattr(hall_of_famer.fitness, "valid"):
+            if hall_of_famer.fitness.valid:
+                right_score_multiplier = hall_of_famer.fitness.values[0]
+                left_model = load_model_from_genes(list(hall_of_famer))
+                # break
+    return left_model, right_score_multiplier
+
+
 def evaluate(individual=None, render=False):
     right_model = load_model_from_genes(individual)
 
     st = time.time()
-    total_score = []
+    all_rewards = []
     right_score_multiplier = 1
     left_model = HardcodedAi()
-    for i in range(3, GAMES_TO_PLAY):
+    for i in range(GAMES_TO_PLAY):
         env = None
-        if i == 0:
-            # left_model = HardcodedAi()
-            pass
-        elif i == 1:
-            env = retro.make('Pong-Atari2600')
-        elif i == 2:
-            left_model = ScoreHardcodedAi()
-        else:
-            hall_of_fame_items = hall_of_fame.items
-            if hall_of_fame is None or len(hall_of_fame_items) == 0:
+        try:
+            if i == 0:
                 # left_model = HardcodedAi()
                 pass
+            elif i == 1:
+                env = retro.make('Pong-Atari2600')
+            elif i == 2:
+                left_model = ScoreHardcodedAi()
             else:
-                random.shuffle(hall_of_fame_items)
-                for hall_of_famer in hall_of_fame_items:
-                    if hasattr(hall_of_famer, "fitness"):
-                        if hasattr(hall_of_famer.fitness, "valid"):
-                            if hall_of_famer.fitness.valid:
-                                right_score_multiplier = hall_of_famer.fitness.values[0]
-                                left_model = load_model_from_genes(list(hall_of_famer))
-                                break
-                print("")
-        if env is None:
-            env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+                if hall_of_fame is None:
+                    # left_model = HardcodedAi()
+                    pass
+                else:
+                    left_model, right_score_multiplier = load_from_hall_of_fame()
+            if env is None:
+                env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
-        env.use_restricted_actions = retro.Actions.FILTERED
-        env.reset()
+            env.use_restricted_actions = retro.Actions.FILTERED
+            env.reset()
 
-        score_info = perform_episode(env, left_model, right_model, render, right_score_multiplier)
-        total_score.append(score_info)
+            right_reward = perform_episode(env, left_model, right_model, render, right_score_multiplier)
+            all_rewards.append(right_reward)
+        finally:
+            env.close()
 
-        env.close()
-
-    total_score = np.array(total_score)
-    left_total_score = sum(total_score[:, 0])
-    right_total_score = sum(total_score[:, 1])
-    average_score = right_total_score / float(GAMES_TO_PLAY)
+    average_reward = sum(all_rewards) / float(GAMES_TO_PLAY)
 
     # print(f"{time.time() - st} seconds duration")
     # print(f"left_total_score: {left_total_score}")
@@ -176,7 +159,7 @@ def evaluate(individual=None, render=False):
     # print(f"relative_score: {relative_score}")
 
     # env.close()
-    return average_score,
+    return average_reward,
 
 
 def perform_episode(env, left_model, right_model, render, score_multiplier):
@@ -241,20 +224,16 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
     if score_info["score1"] == score_info["score2"]:
         return [0, 0]
 
-    return get_rewards(score_multiplier, score_info, total_time)
+    right_reward = get_reward(score_multiplier, total_time, score_info["score2"], score_info["score1"])
+    return right_reward
 
 
 def get_reward(score_multiplier, total_time, my_score, enemy_score):
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALER
     bonus_points = my_score * score_multiplier
-    return (diff + bonus_points) / scaled_time
-
-
-def get_rewards(score_multiplier, score_info, total_time):
-    left_score = get_reward(0, total_time, score_info["score1"], score_info["score2"])
-    right_score = get_reward(score_multiplier, total_time, score_info["score2"], score_info["score1"])
-    return [left_score, right_score]
+    reward = (diff + bonus_points) / scaled_time
+    return reward
 
 
 def get_random_action(all_actions):
@@ -262,7 +241,7 @@ def get_random_action(all_actions):
 
 
 def load_population():
-    global hall_of_fame
+    global hall_of_fame, NETWORK_SHAPE
     list_of_files = glob.glob('checkpoints/*')
     if len(list_of_files) > 0:
         checkpoint = max(list_of_files, key=os.path.getctime)
@@ -274,6 +253,8 @@ def load_population():
         random.setstate(cp["rndstate"])
         if "hall_of_fame" in cp:
             hall_of_fame = cp["hall_of_fame"]
+        if "network_shape" in cp:
+            NETWORK_SHAPE = cp["network_shape"]
         return _sorted_population
     else:
         return None
@@ -312,7 +293,9 @@ def main():
 
     while True:
         population, log = algorithms.eaSimple(
-            population, toolbox, cxpb=CX_PB, mutpb=MUT_PB, ngen=N_GENS,
+            population, toolbox,
+            cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
+            ngen=GENERATIONS_BEFORE_SAVE,
             stats=stats, halloffame=hall_of_fame, verbose=True
         )
 
@@ -323,12 +306,45 @@ def save_checkpoint(population):
     cp = dict(
         population=population,
         hall_of_fame=deepcopy(hall_of_fame),
-        rndstate=random.getstate()
+        rndstate=random.getstate(),
+        network_shape=NETWORK_SHAPE
     )
     os.makedirs("checkpoints", exist_ok=True)
     with open(f"checkpoints/checkpoint_{datetime.datetime.now().strftime('%H_%M_%S')}.pkl", "wb") as cp_file:
         pickle.dump(cp, cp_file)
 
+
+def calculate_gene_size():
+    total_genes = 0
+    for i in range(len(NETWORK_SHAPE) - 1):
+        input_node_amount = NETWORK_SHAPE[i]
+        output_node_amount = NETWORK_SHAPE[i + 1]
+        bias = 1 if BIAS else 0
+        genes = (input_node_amount + bias) * output_node_amount
+        total_genes += genes
+    return total_genes
+
+
+creator.create("Fitness", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.Fitness)
+
+toolbox = base.Toolbox()
+toolbox.register("map", futures.map)
+
+toolbox.register("attr_float", random.random)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=calculate_gene_size())
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+toolbox.register("mate", tools.cxBlend, alpha=CROSSOVER_BLEND_ALPHA)
+# toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutGaussian, mu=GAUSSIAN_MUTATION_MEAN, sigma=GAUSSIAN_MUTATION_SIGMA,
+                 indpb=PROBABILITY_OF_MUTATING_A_SINGLE_GENE)
+# toolbox.register("select", tools.selBest, TOURN_SIZE)
+toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
+
+toolbox.register("evaluate", eval)
+
+hall_of_fame = None
 
 if __name__ == '__main__':
     main()

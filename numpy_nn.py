@@ -17,7 +17,7 @@ def ReLU_derivation(x):
         return 1
 
 
-@np.vectorize
+# @np.vectorize
 def sigmoid(x):
     return 1 / (1 + np.e ** -x)
 
@@ -44,9 +44,9 @@ class NeuralNetwork:
         if weights is None:
             self.weights = self.create_random_weight_matrices()
         else:
-            self.weights = self.load_weights(weights)
+            self.weights = self.populate_weights(weights)
 
-    def load_weights(self, weights):
+    def populate_weights(self, weights):
         index = 0
 
         _weights = []
@@ -116,7 +116,6 @@ class NeuralNetwork:
 
     def run(self, input_vector):
         # input_vector can be tuple, list or ndarray
-
         if self.bias:
             # adding bias node to the end of the inpuy_vector
             input_vector = np.concatenate((input_vector, [self.bias]))
