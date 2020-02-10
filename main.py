@@ -128,6 +128,7 @@ def evaluate(individual=None, render=False):
 
     st = time.time()
     total_score = []
+    right_score_multiplier = 1
     for i in range(GAMES_TO_PLAY):
         env = None
         if i == 0:
@@ -141,14 +142,19 @@ def evaluate(individual=None, render=False):
             if hall_of_fame is None or len(hall_of_fame.items) == 0:
                 left_model = HardcodedAi()
             else:
-                left_model = load_model_from_genes(random.choice(hall_of_fame.items))
+                while True:
+                    random_hall_of_famer = random.choice(hall_of_fame.items)
+                    if random_hall_of_famer.valid:
+                        right_score_multiplier = random_hall_of_famer.fitness.values[0]
+                        break
+                left_model = load_model_from_genes(list(random_hall_of_famer))
         if env is None:
             env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
         env.use_restricted_actions = retro.Actions.FILTERED
         env.reset()
 
-        score_info = perform_episode(env, left_model, right_model, render)
+        score_info = perform_episode(env, left_model, right_model, render, right_score_multiplier)
         total_score.append(score_info)
 
         env.close()
@@ -167,7 +173,7 @@ def evaluate(individual=None, render=False):
     return average_score,
 
 
-def perform_episode(env, left_model, right_model, render):
+def perform_episode(env, left_model, right_model, render, score_multiplier):
     last_score = None
     action = np.copy(BLANK_ACTION)
     timeout_counter = 0.0
@@ -229,9 +235,20 @@ def perform_episode(env, left_model, right_model, render):
     if score_info["score1"] == score_info["score2"]:
         return [0, 0]
 
-    left_reward = (score_info["score1"] - score_info["score2"]) / (total_time / 1000.0)
-    right_reward = (score_info["score2"] - score_info["score1"]) / (total_time / 1000.0)
-    return [left_reward, right_reward]
+    return get_rewards(score_multiplier, score_info, total_time)
+
+
+def get_reward(score_multiplier, total_time, my_score, enemy_score):
+    diff = my_score - enemy_score
+    scaled_time = total_time / TIME_SCALER
+    bonus_points = my_score * score_multiplier
+    return (diff + bonus_points) / scaled_time
+
+
+def get_rewards(score_multiplier, score_info, total_time):
+    left_score = get_reward(0, total_time, score_info["score1"], score_info["score2"])
+    right_score = get_reward(score_multiplier, total_time, score_info["score2"], score_info["score1"])
+    return [left_score, right_score]
 
 
 def get_random_action(all_actions):
