@@ -19,7 +19,7 @@ def evaluate(individual=None, render=RENDER):
 
     all_rewards = []
     right_score_multiplier = 1
-    left_model = HardcodedAi()
+    left_model = None
     for i in range(GAMES_TO_PLAY):
         env = None
         try:
@@ -37,6 +37,8 @@ def evaluate(individual=None, render=RENDER):
                     if new_model is not None: left_model = new_model
             if env is None:
                 env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+            if left_model is None:
+                left_model = HardcodedAi()
 
             env.use_restricted_actions = retro.Actions.FILTERED
             env.reset()
@@ -71,11 +73,15 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
 
         if ball_location is not None:
             if left_location is not None:
-                left_ball_loc = ball_location
-                left_ball_loc[1] = GAME_WIDTH - left_ball_loc[1]
-                left_last_ball_loc = last_ball_location
-                left_last_ball_loc[1] = GAME_WIDTH - left_last_ball_loc[1]
+                # here we are flipping X
+                # we can't flip Y because in inferance we normalise the Y position for both players in the same way
+                #       if we flipped Y for one player, it would be confused about the other
+                # then we flip the output, up/down
+                #      this is to emulate the flipping of y
+                left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
+                left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
                 left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
+                left_action = [left_action[1], left_action[0]]
             if right_location is not None:
                 right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
         else:

@@ -1,3 +1,4 @@
+gym
 deap
 gym-retro
 numpy
