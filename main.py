@@ -15,6 +15,8 @@ from scoop import futures
 from config import *
 from numpy_nn import NeuralNetwork
 
+hall_of_fame = None
+
 
 def eval(individual):
     return evaluate(individual, RENDER)
@@ -113,7 +115,7 @@ def load_from_hall_of_fame():
             if hall_of_famer.fitness.valid:
                 right_score_multiplier = hall_of_famer.fitness.values[0]
                 left_model = load_model_from_genes(list(hall_of_famer))
-                # break
+                break
     return left_model, right_score_multiplier
 
 
@@ -343,8 +345,6 @@ toolbox.register("mutate", tools.mutGaussian, mu=GAUSSIAN_MUTATION_MEAN, sigma=G
 toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
 
 toolbox.register("evaluate", eval)
-
-hall_of_fame = None
 
 if __name__ == '__main__':
     main()
