@@ -76,8 +76,8 @@ def save_checkpoint(_population, hall_of_fame):
         rndstate=random.getstate(),
         network_shape=NETWORK_SHAPE
     )
-    os.makedirs("checkpoints", exist_ok=True)
-    with open("checkpoints/checkpoint_{}.pkl".format(datetime.datetime.now().strftime('%H_%M_%S')), "wb") as cp_file:
+    os.makedirs("checkpoints/checkpoints", exist_ok=True)
+    with open("checkpoints/checkpoints/c_{}.pkl".format(datetime.datetime.now().strftime('%H_%M_%S')), "wb") as cp_file:
         pickle.dump(cp, cp_file)
 
 
