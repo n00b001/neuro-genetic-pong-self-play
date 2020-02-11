@@ -3,7 +3,6 @@ import time
 import retro
 from deap import algorithms
 from deap import tools
-from gym.envs.classic_control import rendering
 
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
@@ -73,14 +72,9 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         if ball_location is not None:
             if left_location is not None:
                 # here we are flipping X
-                # we can't flip Y because in inferance we normalise the Y position for both players in the same way
-                #       if we flipped Y for one player, it would be confused about the other
-                # then we flip the output, up/down
-                #      this is to emulate the flipping of y
                 left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
                 left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
                 left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
-                left_action = [left_action[1], left_action[0]]
             if right_location is not None:
                 right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
         else:
@@ -146,7 +140,12 @@ def main():
 
 
 toolbox.register("evaluate", evaluate)
-viewer = rendering.SimpleImageViewer()
+try:
+    from gym.envs.classic_control import rendering
+
+    viewer = rendering.SimpleImageViewer()
+except Exception as e:
+    print(e)
 
 if __name__ == '__main__':
     main()
