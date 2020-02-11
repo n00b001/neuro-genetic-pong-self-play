@@ -44,17 +44,16 @@ def create_model_from_genes(individual):
 
 
 def create_model_from_hall_of_fame(hall_of_fame):
-    if hall_of_fame is None:
-        left_model = None
-        right_score_multiplier = 1
-        hall_of_fame_items = hall_of_fame.items
-        if len(hall_of_fame_items) != 0:
-            random.shuffle(hall_of_fame_items)
-            for hall_of_famer in hall_of_fame_items:
-                if hall_of_famer.fitness.valid:
-                    right_score_multiplier = hall_of_famer.fitness.values[0]
-                    left_model = create_model_from_genes(list(hall_of_famer))
-                    break
+    left_model = None
+    right_score_multiplier = 1
+    hall_of_fame_items = hall_of_fame.items
+    if len(hall_of_fame_items) != 0:
+        random.shuffle(hall_of_fame_items)
+        for hall_of_famer in hall_of_fame_items:
+            if hall_of_famer.fitness.valid:
+                right_score_multiplier = hall_of_famer.fitness.values[0]
+                left_model = create_model_from_genes(list(hall_of_famer))
+                break
     return left_model, right_score_multiplier
 
 

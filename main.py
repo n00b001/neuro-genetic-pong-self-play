@@ -33,7 +33,8 @@ def evaluate(individual=None, render=RENDER):
                 if hall_of_fame is None:
                     pass
                 else:
-                    left_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                    new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                    if new_model is not None: left_model = new_model
             if env is None:
                 env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
