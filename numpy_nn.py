@@ -61,7 +61,7 @@ class NeuralNetwork:
             _weights.append(matrix_weights)
             index += number_of_numbers_number_to_take
         if index != len(weights):
-            print(f"Not all weights loaded!\n Loaded: {index} weights")
+            print("Not all weights loaded!\n Loaded: {} weights".format(index))
         # return np.array(_weights)
         return _weights
 
@@ -169,9 +169,9 @@ def main():
         for i in range(len(data)):
             simple_network.train(data[i], labels[i])
     for i in range(len(data)):
-        print(f"label: {labels[i]}")
+        print("label: {}".format(labels[i]))
         output = simple_network.run(data[i])
-        print(f"output: {output}")
+        print("output: {}".format(output))
 
 
 if __name__ == '__main__':

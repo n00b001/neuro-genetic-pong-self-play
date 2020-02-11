@@ -40,7 +40,7 @@ def load_latest_population():
 
 def load_population_from_file(checkpoint):
     global hall_of_fame, NETWORK_SHAPE
-    print(f"Loading: {checkpoint}")
+    print("Loading: {}".format(checkpoint))
     with open(checkpoint, "rb") as cp_file:
         cp = pickle.load(cp_file)
     _population = cp["population"]
@@ -67,7 +67,7 @@ def load_best_population():
         except Exception as e:
             print(e)
     if best_checkpoint is not None:
-        print(f"Loading best model: {best_checkpoint}\nwith score: {best_score}")
+        print("Loading best model: {}\nwith score: {}".format(best_checkpoint, best_score))
         # We have to load "twice" because we need to load the hall of fame/NN structure
         return load_population_from_file(best_checkpoint)
     else:

@@ -40,6 +40,7 @@ def evaluate(individual=None, render=RENDER):
             env.use_restricted_actions = retro.Actions.FILTERED
             env.reset()
 
+            # left_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
             right_reward = perform_episode(env, left_model, right_model, render, right_score_multiplier)
             all_rewards.append(right_reward)
         finally:
