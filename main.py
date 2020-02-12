@@ -14,7 +14,7 @@ from utils import inference
 """:arg action[0] is up, action[1] is down"""
 
 
-def evaluate(individual=None, render=RENDER):
+def evaluate(individual=None, hall_of_fame=None, render=RENDER):
     right_model = create_model_from_genes(individual)
 
     all_rewards = []
@@ -34,7 +34,8 @@ def evaluate(individual=None, render=RENDER):
                     pass
                 else:
                     new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
-                    if new_model is not None: left_model = new_model
+                    if new_model is not None:
+                        left_model = new_model
             if env is None:
                 env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
             if left_model is None:
@@ -81,7 +82,7 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
                 left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
                 left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
                 left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
-                left_action = [left_action[1], left_action[0]]
+                # left_action = [left_action[1], left_action[0]]
             if right_location is not None:
                 right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
         else:
@@ -114,6 +115,8 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
             time.sleep(actual_sleep_time)
             st = time.time()
+        else:
+            time.sleep(0.001)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break

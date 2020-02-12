@@ -50,17 +50,17 @@ def load_population_from_file(checkpoint):
         hall_of_fame = cp["hall_of_fame"]
     if "network_shape" in cp:
         NETWORK_SHAPE = cp["network_shape"]
-    return _sorted_population
+    return _sorted_population, hall_of_fame
 
 
 def load_best_population():
-    global population
-    list_of_files = glob.glob('checkpoints/checkpoints/*')
+    global population, hall_of_fame
+    list_of_files = glob.glob('checkpoints/*')
     best_score = 0
     best_checkpoint = None
     for f in list_of_files:
         try:
-            population = load_population_from_file(f)
+            population, hall_of_fame = load_population_from_file(f)
             if best_score < population[0].fitness.values[0]:
                 best_score = population[0].fitness.values[0]
                 best_checkpoint = f
