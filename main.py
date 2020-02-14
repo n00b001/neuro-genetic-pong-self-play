@@ -133,8 +133,10 @@ def main():
             ga.population, toolbox,
             cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
             ngen=GENERATIONS_BEFORE_SAVE,
-            stats=stats, halloffame=hall_of_fame, verbose=True
+            stats=stats, halloffame=hall_of_fame, verbose=False
         )
+        scoop.logger.info(log)
+        scoop.logger.info(stats)
 
         save_checkpoint(ga.population, hall_of_fame)
 
@@ -145,7 +147,7 @@ try:
 
     viewer = rendering.SimpleImageViewer()
 except Exception as e:
-    print(e)
+    scoop.logger.error(e)
 
 if __name__ == '__main__':
     main()
