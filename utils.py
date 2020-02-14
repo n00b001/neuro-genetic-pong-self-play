@@ -3,7 +3,7 @@ import os
 import pickle
 import random
 from copy import deepcopy
-
+import scoop
 from config import *
 from config import GAME_WIDTH, GAME_PLAYABLE_HEIGHT
 from numpy_nn import NeuralNetwork

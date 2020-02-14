@@ -4,6 +4,7 @@ import retro
 from deap import algorithms
 from deap import tools
 
+import scoop
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
 from ga import toolbox, hall_of_fame
