@@ -137,7 +137,7 @@ def main():
             stats=stats, halloffame=hall_of_fame, verbose=False
         )
         scoop.logger.info(log)
-        scoop.logger.info(stats)
+        scoop.logger.info(stats.compile(ga.population))
 
         save_checkpoint(ga.population, hall_of_fame)
 
