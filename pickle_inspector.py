@@ -3,9 +3,9 @@ from main import evaluate
 
 
 def main():
-    population, hall_of_fame = load_best_population()
+    population = load_best_population()
     individual = population[0]
-    evaluate(individual=individual, hall_of_fame=hall_of_fame, render=True)
+    evaluate(individual=individual, render=True)
 
 
 if __name__ == '__main__':
