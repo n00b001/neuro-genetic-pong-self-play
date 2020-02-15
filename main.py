@@ -11,10 +11,26 @@ from ga import toolbox, hall_of_fame
 from utils import *
 from utils import inference
 
+from human_control import HumanInput
+
 """:arg action[0] is up, action[1] is down"""
 
 
-def evaluate(individual=None, hall_of_fame=None, render=RENDER):
+def run_against_human(individual=None):
+    if individual is None:
+        pass
+    right_model = create_model_from_genes(individual)
+    left_model = HumanInput()
+
+    env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+
+    env.use_restricted_actions = retro.Actions.FILTERED
+    env.reset()
+    perform_episode(env, left_model, right_model, True, None)
+    pass
+
+
+def evaluate(individual=None, render=RENDER):
     right_model = create_model_from_genes(individual)
 
     all_rewards = []

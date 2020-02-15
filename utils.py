@@ -58,6 +58,8 @@ def create_model_from_hall_of_fame(hall_of_fame):
 
 
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
+    if score_multiplier is None:
+        pass
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALER
     bonus_points = my_score * score_multiplier
