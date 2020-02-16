@@ -22,7 +22,7 @@ def sigmoid(x):
     return 1 / (1 + np.e ** -x)
 
 
-activation_function = sigmoid
+activation_function = ReLU
 
 
 def truncated_normal(mean=0, sd=1, low=0, upp=10):
@@ -41,6 +41,8 @@ class NeuralNetwork:
         self.nodes = nodes
         self.learning_rate = learning_rate
         self.bias = 1 if bias else 0
+        self.last_weight = -1 if bias else None
+        self.list_of_transitional_arrays = [np.ones(n + bias) for n in nodes]
         if weights is None:
             self.weights = self.create_random_weight_matrices()
         else:
@@ -115,23 +117,17 @@ class NeuralNetwork:
             w += self.learning_rate * x
 
     def run(self, input_vector):
-        # input_vector can be tuple, list or ndarray
-        if self.bias:
-            # adding bias node to the end of the inpuy_vector
-            input_vector = np.concatenate((input_vector, [self.bias]))
-        input_vector = np.array(input_vector, ndmin=2).T
+        if len(input_vector) != self.list_of_transitional_arrays[0][:self.last_weight].shape[0]:
+            raise Exception("input vector wrong shape")
 
-        for w in self.weights[:-1]:
-            input_vector = np.dot(w, input_vector)
-            input_vector = activation_function(input_vector)
+        self.list_of_transitional_arrays[0][:len(input_vector)] = input_vector
 
-            if self.bias:
-                input_vector = np.concatenate((input_vector, [[self.bias]]))
+        for i, w in enumerate(self.weights[:]):
+            self.list_of_transitional_arrays[i + 1][:self.last_weight] = np.dot(w, self.list_of_transitional_arrays[i])
+            self.list_of_transitional_arrays[i + 1][:self.last_weight] = \
+                activation_function(self.list_of_transitional_arrays[i + 1][:self.last_weight])
 
-        input_vector = np.dot(self.weights[-1], input_vector)
-        input_vector = activation_function(input_vector)
-
-        inx = np.argmax(np.squeeze(input_vector))
+        inx = np.argmax(np.squeeze(self.list_of_transitional_arrays[-1][:self.last_weight]))
         if inx == 0:
             return [1, 0]
         elif inx == 1:

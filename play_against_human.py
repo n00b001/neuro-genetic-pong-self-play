@@ -3,7 +3,7 @@ from main import run_against_human
 
 
 def main():
-    population, hall_of_fame = load_best_population()
+    population = load_best_population()
     individual = population[0]
     run_against_human(individual)
 
