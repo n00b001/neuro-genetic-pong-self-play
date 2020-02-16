@@ -14,9 +14,9 @@ from numpy_nn import NeuralNetwork
 
 def find_stuff(observation):
     chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
-    ball_location = get_rect(chopped_observation, BALL_COLOUR)
-    left_location = get_rect(chopped_observation, LEFT_GUY_COLOUR)
-    right_location = get_rect(chopped_observation, RIGHT_GUY_COLOUR)
+    ball_location = get_rect_quickly(chopped_observation, BALL_COLOUR)
+    left_location = get_rect_quickly(chopped_observation, LEFT_GUY_COLOUR)
+    right_location = get_rect_quickly(chopped_observation, RIGHT_GUY_COLOUR)
     return ball_location, left_location, right_location
 
 
@@ -24,14 +24,16 @@ def get_rect(chopped_observation, colour):
     indices = np.where(np.all(chopped_observation == colour, axis=-1))
     if len(indices[0]) == 0:
         return None
-    return np.average(indices, axis=1)
+    value = np.average(indices, axis=1)
+    return value
 
 
 def get_rect_quickly(chopped_observation, colour):
-    indices = np.where(np.all(chopped_observation == colour, axis=-1))
-    if len(indices[0]) == 0:
-        return None
-    return np.average(indices, axis=1)
+    value = np.average(
+        np.argwhere(chopped_observation == colour)[:, :-1],
+        axis=0
+    )
+    return value
 
 
 def keep_within_game_bounds_please(paddle, action):
@@ -68,12 +70,10 @@ def create_model_from_hall_of_fame(hall_of_fame):
 
 
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
-    if score_multiplier is None:
-        pass
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALER
     bonus_points = my_score * score_multiplier
-    reward = diff / scaled_time
+    reward = (diff + bonus_points) / scaled_time
     return reward
 
 
@@ -143,18 +143,36 @@ def wrapper(func, *args, **kwargs):
     return wrapped
 
 
-if __name__ == '__main__':
-    observation = np.load("obs.npy")
-    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
-    colour = BALL_COLOUR
-    get_rect(chopped_observation, colour)
-
+def test_methods(chopped_observation, colour):
+    output = get_rect(chopped_observation, colour)
+    output2 = get_rect(chopped_observation, colour)
+    if output is None and output2 is None:
+        pass
+    elif output is not None and output2 is not None:
+        if output[0] != output2[0] or output[1] != output2[1]:
+            print(output, output2)
+            assert False
+    else:
+        print(output, output2)
+        assert False
     wrapped_1 = wrapper(get_rect, chopped_observation, colour)
     timer_1 = timeit.Timer(stmt=wrapped_1)
     output = timer_1.autorange()
-    print(output)
-
+    print("get_rect\t\t", output)
     wrapped_2 = wrapper(get_rect_quickly, chopped_observation, colour)
     timer_2 = timeit.Timer(stmt=wrapped_2)
     output = timer_2.autorange()
-    print(output)
+    print("get_rect_quickly", output)
+
+
+if __name__ == '__main__':
+    observation = np.load("obs.npy")
+    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
+    test_methods(chopped_observation, BALL_COLOUR)
+    test_methods(chopped_observation, LEFT_GUY_COLOUR)
+    test_methods(chopped_observation, RIGHT_GUY_COLOUR)
+
+    chopped_observation = np.zeros_like(chopped_observation)
+    test_methods(chopped_observation, BALL_COLOUR)
+    test_methods(chopped_observation, LEFT_GUY_COLOUR)
+    test_methods(chopped_observation, RIGHT_GUY_COLOUR)

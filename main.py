@@ -15,8 +15,6 @@ from utils import inference
 
 
 def run_against_human(individual=None):
-    if individual is None:
-        pass
     right_model = create_model_from_genes(individual)
     left_model = HumanInput()
 
@@ -24,8 +22,7 @@ def run_against_human(individual=None):
 
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
-    perform_episode(env, left_model, right_model, True, None)
-    pass
+    perform_episode(env, left_model, right_model, True, 1)
 
 
 def evaluate(individual=None, render=RENDER):
