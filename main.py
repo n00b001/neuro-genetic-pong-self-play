@@ -4,14 +4,12 @@ import retro
 from deap import algorithms
 from deap import tools
 
-import scoop
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
 from ga import toolbox, hall_of_fame
+from human_control import HumanInput
 from utils import *
 from utils import inference
-
-from human_control import HumanInput
 
 """:arg action[0] is up, action[1] is down"""
 
@@ -126,8 +124,6 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
             time.sleep(actual_sleep_time)
             st = time.time()
-        else:
-            time.sleep(0.001)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break

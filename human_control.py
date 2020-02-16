@@ -31,7 +31,6 @@ class HumanInput:
             on_press=on_press,
             on_release=on_release)
         self.listener.start()
-        pass
 
     def run(self, input_vector=None):
         return [button_list[button_w], button_list[button_s]]
