@@ -11,10 +11,32 @@ from numpy_nn import NeuralNetwork
 
 def find_stuff(observation):
     chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
-    ball_location = get_rect(chopped_observation, BALL_COLOUR)
-    left_location = get_rect(chopped_observation, LEFT_GUY_COLOUR)
-    right_location = get_rect(chopped_observation, RIGHT_GUY_COLOUR)
+
+    ball_location, left_location, right_location = get_all_rect(
+        chopped_observation,
+        [BALL_COLOUR, LEFT_GUY_COLOUR, RIGHT_GUY_COLOUR])
     return ball_location, left_location, right_location
+
+
+def get_all_rect(chopped_observation, colour):
+    indices = np.array(np.where([chopped_observation == colour[0],
+                                 chopped_observation == colour[1],
+                                 chopped_observation == colour[2]]))[:3]
+    rect_1 = np.take(indices, np.where(indices[0] == 0), axis=1)[1:]
+    rect_1 = reshape_rect(rect_1)
+    rect_2 = np.take(indices, np.where(indices[0] == 1), axis=1)[1:]
+    rect_2 = reshape_rect(rect_2)
+    rect_3 = np.take(indices, np.where(indices[0] == 2), axis=1)[1:]
+    rect_3 = reshape_rect(rect_3)
+    return rect_1, rect_2, rect_3
+
+
+def reshape_rect(rect):
+    if rect.shape[2] == 0:
+        rect = None
+    else:
+        rect = np.squeeze(np.average(rect, axis=2), axis=1)
+    return rect
 
 
 def get_rect(chopped_observation, colour):
