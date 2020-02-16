@@ -2,6 +2,7 @@ import datetime
 import os
 import pickle
 import random
+import timeit
 from copy import deepcopy
 
 import scoop
@@ -20,6 +21,13 @@ def find_stuff(observation):
 
 
 def get_rect(chopped_observation, colour):
+    indices = np.where(np.all(chopped_observation == colour, axis=-1))
+    if len(indices[0]) == 0:
+        return None
+    return np.average(indices, axis=1)
+
+
+def get_rect_quickly(chopped_observation, colour):
     indices = np.where(np.all(chopped_observation == colour, axis=-1))
     if len(indices[0]) == 0:
         return None
@@ -126,3 +134,27 @@ def repeat_upsample(rgb_array, k=1, l=1, err=[]):
     # if the input image is of shape (m,n,3), the output image will be of shape (k*m, l*n, 3)
 
     return np.repeat(np.repeat(rgb_array, k, axis=0), l, axis=1)
+
+
+def wrapper(func, *args, **kwargs):
+    def wrapped():
+        return func(*args, **kwargs)
+
+    return wrapped
+
+
+if __name__ == '__main__':
+    observation = np.load("obs.npy")
+    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
+    colour = BALL_COLOUR
+    get_rect(chopped_observation, colour)
+
+    wrapped_1 = wrapper(get_rect, chopped_observation, colour)
+    timer_1 = timeit.Timer(stmt=wrapped_1)
+    output = timer_1.autorange()
+    print(output)
+
+    wrapped_2 = wrapper(get_rect_quickly, chopped_observation, colour)
+    timer_2 = timeit.Timer(stmt=wrapped_2)
+    output = timer_2.autorange()
+    print(output)
