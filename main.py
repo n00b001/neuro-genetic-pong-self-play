@@ -11,7 +11,23 @@ from ga import toolbox, hall_of_fame
 from utils import *
 from utils import inference
 
+from human_control import HumanInput
+
 """:arg action[0] is up, action[1] is down"""
+
+
+def run_against_human(individual=None):
+    if individual is None:
+        pass
+    right_model = create_model_from_genes(individual)
+    left_model = HumanInput()
+
+    env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+
+    env.use_restricted_actions = retro.Actions.FILTERED
+    env.reset()
+    perform_episode(env, left_model, right_model, True, None)
+    pass
 
 
 def evaluate(individual=None, render=RENDER):
@@ -33,7 +49,9 @@ def evaluate(individual=None, render=RENDER):
                 if hall_of_fame is None:
                     pass
                 else:
-                    left_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                    new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                    if new_model is not None:
+                        left_model = new_model
             if env is None:
                 env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
             if left_model is None:
@@ -108,6 +126,8 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
             time.sleep(actual_sleep_time)
             st = time.time()
+        else:
+            time.sleep(0.001)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break

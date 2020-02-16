@@ -4,3 +4,4 @@ gym-retro
 numpy
 tensorflow
 scoop
+pynput

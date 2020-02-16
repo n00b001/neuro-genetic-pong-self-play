@@ -55,7 +55,7 @@ def load_population_from_file(checkpoint):
 
 def load_best_population():
     global population
-    list_of_files = glob.glob('checkpoints/checkpoints/*')
+    list_of_files = glob.glob('checkpoints/*')
     best_score = 0
     best_checkpoint = None
     for f in list_of_files:
