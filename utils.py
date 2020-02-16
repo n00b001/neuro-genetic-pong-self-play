@@ -2,7 +2,10 @@ import datetime
 import os
 import pickle
 import random
+import timeit
 from copy import deepcopy
+
+import scoop
 
 from config import *
 from config import GAME_WIDTH, GAME_PLAYABLE_HEIGHT
@@ -40,6 +43,13 @@ def reshape_rect(rect):
 
 
 def get_rect(chopped_observation, colour):
+    indices = np.where(np.all(chopped_observation == colour, axis=-1))
+    if len(indices[0]) == 0:
+        return None
+    return np.average(indices, axis=1)
+
+
+def get_rect_quickly(chopped_observation, colour):
     indices = np.where(np.all(chopped_observation == colour, axis=-1))
     if len(indices[0]) == 0:
         return None
@@ -100,8 +110,8 @@ def save_checkpoint(_population, hall_of_fame):
         rndstate=random.getstate(),
         network_shape=NETWORK_SHAPE
     )
-    os.makedirs("checkpoints", exist_ok=True)
-    with open("checkpoints/checkpoint_{}.pkl".format(datetime.datetime.now().strftime('%H_%M_%S')), "wb") as cp_file:
+    os.makedirs("checkpoints/checkpoints", exist_ok=True)
+    with open("checkpoints/checkpoints/c_{}.pkl".format(datetime.datetime.now().strftime('%H_%M_%S')), "wb") as cp_file:
         pickle.dump(cp, cp_file)
 
 
@@ -137,7 +147,8 @@ def repeat_upsample(rgb_array, k=1, l=1, err=[]):
     # repeat kinda crashes if k/l are zero
     if k <= 0 or l <= 0:
         if not err:
-            print("Number of repeats must be larger than 0, k: {}, l: {}, returning default array!".format(k, l))
+            scoop.logger.error(
+                "Number of repeats must be larger than 0, k: {}, l: {}, returning default array!".format(k, l))
             err.append('logged')
         return rgb_array
 
@@ -145,3 +156,27 @@ def repeat_upsample(rgb_array, k=1, l=1, err=[]):
     # if the input image is of shape (m,n,3), the output image will be of shape (k*m, l*n, 3)
 
     return np.repeat(np.repeat(rgb_array, k, axis=0), l, axis=1)
+
+
+def wrapper(func, *args, **kwargs):
+    def wrapped():
+        return func(*args, **kwargs)
+
+    return wrapped
+
+
+if __name__ == '__main__':
+    observation = np.load("obs.npy")
+    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
+    colour = BALL_COLOUR
+    get_rect(chopped_observation, colour)
+
+    wrapped_1 = wrapper(get_rect, chopped_observation, colour)
+    timer_1 = timeit.Timer(stmt=wrapped_1)
+    output = timer_1.autorange()
+    print(output)
+
+    wrapped_2 = wrapper(get_rect_quickly, chopped_observation, colour)
+    timer_2 = timeit.Timer(stmt=wrapped_2)
+    output = timer_2.autorange()
+    print(output)

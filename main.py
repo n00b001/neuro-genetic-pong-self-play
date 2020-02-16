@@ -3,15 +3,13 @@ import time
 import retro
 from deap import algorithms
 from deap import tools
-from gym.envs.classic_control import rendering
 
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
 from ga import toolbox, hall_of_fame
+from human_control import HumanInput
 from utils import *
 from utils import inference
-
-from human_control import HumanInput
 
 """:arg action[0] is up, action[1] is down"""
 
@@ -91,14 +89,9 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         if ball_location is not None:
             if left_location is not None:
                 # here we are flipping X
-                # we can't flip Y because in inferance we normalise the Y position for both players in the same way
-                #       if we flipped Y for one player, it would be confused about the other
-                # then we flip the output, up/down
-                #      this is to emulate the flipping of y
                 left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
                 left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
                 left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
-                # left_action = [left_action[1], left_action[0]]
             if right_location is not None:
                 right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
         else:
@@ -131,8 +124,6 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
             time.sleep(actual_sleep_time)
             st = time.time()
-        else:
-            time.sleep(0.001)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break
@@ -159,14 +150,21 @@ def main():
             ga.population, toolbox,
             cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
             ngen=GENERATIONS_BEFORE_SAVE,
-            stats=stats, halloffame=hall_of_fame, verbose=True
+            stats=stats, halloffame=hall_of_fame, verbose=False
         )
+        scoop.logger.info(log)
+        scoop.logger.info(stats.compile(ga.population))
 
         save_checkpoint(ga.population, hall_of_fame)
 
 
 toolbox.register("evaluate", evaluate)
-viewer = rendering.SimpleImageViewer()
+try:
+    from gym.envs.classic_control import rendering
+
+    viewer = rendering.SimpleImageViewer()
+except Exception as e:
+    scoop.logger.error(e)
 
 if __name__ == '__main__':
     main()

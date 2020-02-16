@@ -1,4 +1,5 @@
 import numpy as np
+import scoop
 from scipy.stats import truncnorm
 
 
@@ -63,7 +64,7 @@ class NeuralNetwork:
             _weights.append(matrix_weights)
             index += number_of_numbers_number_to_take
         if index != len(weights):
-            print("Not all weights loaded!\n Loaded: {} weights".format(index))
+            scoop.logger.warn("Not all weights loaded!\n Loaded: {} weights".format(index))
         # return np.array(_weights)
         return _weights
 
@@ -150,7 +151,7 @@ def main():
         labeled_data.append([el, [0, 1]])
 
     np.random.shuffle(labeled_data)
-    print(labeled_data[:10])
+    scoop.logger.info(labeled_data[:10])
 
     data, labels = zip(*labeled_data)
     labels = np.array(labels)
@@ -165,9 +166,9 @@ def main():
         for i in range(len(data)):
             simple_network.train(data[i], labels[i])
     for i in range(len(data)):
-        print("label: {}".format(labels[i]))
+        scoop.logger.info("label: {}".format(labels[i]))
         output = simple_network.run(data[i])
-        print("output: {}".format(output))
+        scoop.logger.info("output: {}".format(output))
 
 
 if __name__ == '__main__':
