@@ -2,7 +2,6 @@ import datetime
 import os
 import pickle
 import random
-import timeit
 from copy import deepcopy
 
 import scoop
@@ -14,11 +13,40 @@ from numpy_nn import NeuralNetwork
 
 def find_stuff(observation):
     chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
+    ball_location = get_rect_quickly(chopped_observation, BALL_COLOUR)
+    left_location = get_rect_quickly(chopped_observation, LEFT_GUY_COLOUR)
+    right_location = get_rect_quickly(chopped_observation, RIGHT_GUY_COLOUR)
+    return np.array([ball_location, left_location, right_location])
 
-    ball_location, left_location, right_location = get_all_rect(
-        chopped_observation,
-        [BALL_COLOUR, LEFT_GUY_COLOUR, RIGHT_GUY_COLOUR])
-    return ball_location, left_location, right_location
+
+# @np.vectorize
+def find_stuff_quickly(observation):
+    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
+    locations = np.argwhere([
+        chopped_observation == BALL_COLOUR,
+        chopped_observation == LEFT_GUY_COLOUR,
+        chopped_observation == RIGHT_GUY_COLOUR
+    ])[:, :-1]
+
+    split = np.split(
+        locations[:, 1:], np.cumsum(np.unique(locations[:, 0], return_counts=True)[1])[:-1]
+    )
+
+    if len(split) < 2:
+        return np.array([None, None, None])
+
+    ball_location = np.average(split[0], axis=0)
+    left_location = np.average(split[1], axis=0)
+    right_location = np.average(split[2], axis=0)
+
+    del split
+    del locations
+    del chopped_observation
+
+    # https://stackoverflow.com/questions/911871/detect-if-a-numpy-array-contains-at-least-one-non-numeric-value
+    if np.isnan(ball_location).any() or np.isnan(left_location).any() or np.isnan(right_location).any():
+        return np.array([None, None, None])
+    return np.array([ball_location, left_location, right_location])
 
 
 def get_all_rect(chopped_observation, colour):
@@ -46,14 +74,19 @@ def get_rect(chopped_observation, colour):
     indices = np.where(np.all(chopped_observation == colour, axis=-1))
     if len(indices[0]) == 0:
         return None
-    return np.average(indices, axis=1)
+    value = np.average(indices, axis=1)
+    return value
 
 
 def get_rect_quickly(chopped_observation, colour):
-    indices = np.where(np.all(chopped_observation == colour, axis=-1))
-    if len(indices[0]) == 0:
+    value = np.average(
+        np.argwhere(chopped_observation == colour)[:, :-1],
+        axis=0
+    )
+    # https://stackoverflow.com/questions/911871/detect-if-a-numpy-array-contains-at-least-one-non-numeric-value
+    if np.isnan(value).any():
         return None
-    return np.average(indices, axis=1)
+    return value
 
 
 def keep_within_game_bounds_please(paddle, action):
@@ -90,12 +123,10 @@ def create_model_from_hall_of_fame(hall_of_fame):
 
 
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
-    if score_multiplier is None:
-        pass
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALER
     bonus_points = my_score * score_multiplier
-    reward = diff / scaled_time
+    reward = (diff + bonus_points) / scaled_time
     return reward
 
 
@@ -156,27 +187,3 @@ def repeat_upsample(rgb_array, k=1, l=1, err=[]):
     # if the input image is of shape (m,n,3), the output image will be of shape (k*m, l*n, 3)
 
     return np.repeat(np.repeat(rgb_array, k, axis=0), l, axis=1)
-
-
-def wrapper(func, *args, **kwargs):
-    def wrapped():
-        return func(*args, **kwargs)
-
-    return wrapped
-
-
-if __name__ == '__main__':
-    observation = np.load("obs.npy")
-    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
-    colour = BALL_COLOUR
-    get_rect(chopped_observation, colour)
-
-    wrapped_1 = wrapper(get_rect, chopped_observation, colour)
-    timer_1 = timeit.Timer(stmt=wrapped_1)
-    output = timer_1.autorange()
-    print(output)
-
-    wrapped_2 = wrapper(get_rect_quickly, chopped_observation, colour)
-    timer_2 = timeit.Timer(stmt=wrapped_2)
-    output = timer_2.autorange()
-    print(output)
