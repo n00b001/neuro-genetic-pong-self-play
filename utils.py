@@ -145,39 +145,44 @@ def wrapper(func, *args, **kwargs):
     return wrapped
 
 
-def test_methods(chopped_observation, colour, meth1, meth2):
-    output = meth1(chopped_observation, colour)
-    output2 = meth2(chopped_observation, colour)
+def test_methods(args, meths):
+    meth1, meth2 = meths
+
+    output = meth1(*args)
+    output2 = meth2(*args)
+
     if output is None and output2 is None:
         pass
     elif output is not None and output2 is not None:
         if output[0] != output2[0] or output[1] != output2[1]:
-            print(output, output2)
-            assert False
+            raise Exception("meth1 out: {}\nmeth2 out: {}".format(output, output2))
     else:
-        print(output, output2)
-        assert False
-    wrapped_1 = wrapper(meth1, chopped_observation, colour)
+        raise Exception("meth1 out: {}\nmeth2 out: {}".format(output, output2))
+    wrapped_1 = wrapper(meth1, *args)
     timer_1 = timeit.Timer(stmt=wrapped_1)
     output_1 = timer_1.autorange()
-    wrapped_2 = wrapper(meth2, chopped_observation, colour)
+    wrapped_2 = wrapper(meth2, *args)
     timer_2 = timeit.Timer(stmt=wrapped_2)
     output_2 = timer_2.autorange()
     return [output_1[1], output_2[1]]
 
 
-if __name__ == '__main__':
+def test_method_entire(times, meths):
     _observation = np.load("obs.npy")
     _chopped_observation = _observation[GAME_TOP: GAME_BOTTOM, :]
-    times = []
     all_colours = [BALL_COLOUR, LEFT_GUY_COLOUR, RIGHT_GUY_COLOUR]
     for c in all_colours:
-        times.append(test_methods(_chopped_observation, c, get_rect, get_rect_quickly))
-
+        times.append(test_methods(args=(_chopped_observation, c), meths=meths))
     _chopped_observation = np.zeros_like(_chopped_observation)
     for c in all_colours:
-        times.append(test_methods(_chopped_observation, c, get_rect, get_rect_quickly))
+        times.append(test_methods(args=(_chopped_observation, c), meths=meths))
     times = np.array(times)
     avr_1 = sum(times[:, 0]) / len(times)
     avr_2 = sum(times[:, 1]) / len(times)
-    print("Avr1: {}\nAvr2: {}".format(avr_1, avr_2))
+    return avr_1, avr_2
+
+
+if __name__ == '__main__':
+    _times = []
+    _avr_1, _avr_2 = test_method_entire(_times, meths=(get_rect, get_rect_quickly))
+    print("Avr1: {}\nAvr2: {}\nspeedup: {}%".format(_avr_1, _avr_2, (_avr_1/_avr_2)*100.0))
