@@ -23,7 +23,7 @@ def sigmoid(x):
     return 1 / (1 + np.e ** -x)
 
 
-activation_function = ReLU
+activation_function = sigmoid
 
 
 def truncated_normal(mean=0, sd=1, low=0, upp=10):

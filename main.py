@@ -147,10 +147,9 @@ def main():
             ga.population, toolbox,
             cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
             ngen=GENERATIONS_BEFORE_SAVE,
-            stats=stats, halloffame=hall_of_fame, verbose=False
+            stats=stats, halloffame=hall_of_fame, verbose=True
         )
         scoop.logger.info(log)
-        scoop.logger.info(stats.compile(ga.population))
 
         save_checkpoint(ga.population, hall_of_fame)
 
@@ -165,5 +164,3 @@ except Exception as e:
 
 if __name__ == '__main__':
     main()
-    # individual = [3.0982564618623556, 0.3456392740138593, 0.14082890678241, 1.5486152183076243, 1.688957528292551, -0.41022947331564297, 1.9202332819872239, -0.8111005037794137, -2.1761033755921253, 0.0816563985669917, 1.237618565571571, 3.8602528621388834, 0.5584348334191216, 0.7207469622503221, -0.736499399144851, -2.0237233647139488, -0.08334005559341429, -0.8852364356431746, -1.2334751501020085, -1.623317909185873, 1.3730356225306743, -0.8823778108129245, 0.5819496473264711, 1.1509894218336085, -2.291795897101383, 0.7258951582377213, 2.573366867768538, -0.07424030006561644]
-    # evaluate(individual=individual, render=True)
