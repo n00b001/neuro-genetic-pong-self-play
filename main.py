@@ -30,9 +30,9 @@ def evaluate(individual=None, render=RENDER):
 
     all_rewards = []
     right_score_multiplier = 1
-    left_model = None
     for i in range(GAMES_TO_PLAY):
         env = None
+        left_model = None
         try:
             if i == 0:
                 pass
@@ -59,6 +59,8 @@ def evaluate(individual=None, render=RENDER):
             all_rewards.append(right_reward)
         finally:
             env.close()
+            del env
+            del left_model
 
     average_reward = sum(all_rewards) / float(GAMES_TO_PLAY)
     return average_reward,
@@ -77,24 +79,10 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             left_model.set_score(score_info)
 
         ball_location, left_location, right_location = find_stuff(observation)
-        left_action = get_random_action(ALL_ACTIONS)
-        right_action = get_random_action(ALL_ACTIONS)
-
-        if last_ball_location is None:
-            last_ball_location = ball_location
-
-        if ball_location is not None:
-            if left_location is not None:
-                # here we are flipping X
-                left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
-                left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
-                left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
-            if right_location is not None:
-                right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
-        else:
-            left_action = [0, 0]
-            right_action = [0, 0]
-
+        del observation
+        left_action, right_action = get_actions(
+            ball_location, last_ball_location, left_location, left_model, right_location, right_model
+        )
         last_ball_location = ball_location
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
@@ -103,24 +91,13 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         action[RIGHT_ACTION_START:RIGHT_ACTION_END] = right_action_restricted
         action[RIGHT_ACTION_END:LEFT_ACTION_END] = left_action_restricted
 
-        if last_score is not None:
-            if last_score == score_info:
-                timeout_counter += 1.0
-            else:
-                total_frames += timeout_counter
-                timeout_counter = 0.0
+        timeout_counter, total_frames = calculate_timeout_and_frames(
+            last_score, score_info, timeout_counter, total_frames
+        )
         last_score = score_info
 
         if render:
-            rgb = env.render('rgb_array')
-            # gets choppy when scaled over 4,4 for me
-            upscaled = repeat_upsample(rgb, 4, 4)
-            viewer.imshow(upscaled)
-            desired_sleep_time = 1.0 / FPS
-            calculation_duration = time.time() - st
-            actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
-            time.sleep(actual_sleep_time)
-            st = time.time()
+            st = render_game(env, st)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break
@@ -133,6 +110,48 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         return 0
     right_reward = calculate_reward(score_multiplier, total_frames, score_info["score2"], score_info["score1"])
     return right_reward
+
+
+def render_game(env, st):
+    rgb = env.render('rgb_array')
+    # gets choppy when scaled over 4,4 for me
+    upscaled = repeat_upsample(rgb, 4, 4)
+    viewer.imshow(upscaled)
+    desired_sleep_time = 1.0 / FPS
+    calculation_duration = time.time() - st
+    actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
+    time.sleep(actual_sleep_time)
+    st = time.time()
+    return st
+
+
+def calculate_timeout_and_frames(last_score, score_info, timeout_counter, total_frames):
+    if last_score is not None:
+        if last_score == score_info:
+            timeout_counter += 1.0
+        else:
+            total_frames += timeout_counter
+            timeout_counter = 0.0
+    return timeout_counter, total_frames
+
+
+def get_actions(ball_location, last_ball_location, left_location, left_model, right_location, right_model):
+    left_action = get_random_action(ALL_ACTIONS)
+    right_action = get_random_action(ALL_ACTIONS)
+    if last_ball_location is None:
+        last_ball_location = ball_location
+    if ball_location is not None:
+        if left_location is not None:
+            # here we are flipping X
+            left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
+            left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
+            left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
+        if right_location is not None:
+            right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
+    else:
+        left_action = [0, 0]
+        right_action = [0, 0]
+    return left_action, right_action
 
 
 def main():
