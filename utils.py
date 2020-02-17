@@ -33,6 +33,8 @@ def get_rect_quickly(chopped_observation, colour):
         np.argwhere(chopped_observation == colour)[:, :-1],
         axis=0
     )
+    if any(np.isnan(value)):
+        return None
     return value
 
 
@@ -143,9 +145,9 @@ def wrapper(func, *args, **kwargs):
     return wrapped
 
 
-def test_methods(chopped_observation, colour):
-    output = get_rect(chopped_observation, colour)
-    output2 = get_rect(chopped_observation, colour)
+def test_methods(chopped_observation, colour, meth1, meth2):
+    output = meth1(chopped_observation, colour)
+    output2 = meth2(chopped_observation, colour)
     if output is None and output2 is None:
         pass
     elif output is not None and output2 is not None:
@@ -155,24 +157,27 @@ def test_methods(chopped_observation, colour):
     else:
         print(output, output2)
         assert False
-    wrapped_1 = wrapper(get_rect, chopped_observation, colour)
+    wrapped_1 = wrapper(meth1, chopped_observation, colour)
     timer_1 = timeit.Timer(stmt=wrapped_1)
-    output = timer_1.autorange()
-    print("get_rect\t\t", output)
-    wrapped_2 = wrapper(get_rect_quickly, chopped_observation, colour)
+    output_1 = timer_1.autorange()
+    wrapped_2 = wrapper(meth2, chopped_observation, colour)
     timer_2 = timeit.Timer(stmt=wrapped_2)
-    output = timer_2.autorange()
-    print("get_rect_quickly", output)
+    output_2 = timer_2.autorange()
+    return [output_1[1], output_2[1]]
 
 
 if __name__ == '__main__':
-    observation = np.load("obs.npy")
-    chopped_observation = observation[GAME_TOP: GAME_BOTTOM, :]
-    test_methods(chopped_observation, BALL_COLOUR)
-    test_methods(chopped_observation, LEFT_GUY_COLOUR)
-    test_methods(chopped_observation, RIGHT_GUY_COLOUR)
+    _observation = np.load("obs.npy")
+    _chopped_observation = _observation[GAME_TOP: GAME_BOTTOM, :]
+    times = []
+    all_colours = [BALL_COLOUR, LEFT_GUY_COLOUR, RIGHT_GUY_COLOUR]
+    for c in all_colours:
+        times.append(test_methods(_chopped_observation, c, get_rect, get_rect_quickly))
 
-    chopped_observation = np.zeros_like(chopped_observation)
-    test_methods(chopped_observation, BALL_COLOUR)
-    test_methods(chopped_observation, LEFT_GUY_COLOUR)
-    test_methods(chopped_observation, RIGHT_GUY_COLOUR)
+    _chopped_observation = np.zeros_like(_chopped_observation)
+    for c in all_colours:
+        times.append(test_methods(_chopped_observation, c, get_rect, get_rect_quickly))
+    times = np.array(times)
+    avr_1 = sum(times[:, 0]) / len(times)
+    avr_2 = sum(times[:, 1]) / len(times)
+    print("Avr1: {}\nAvr2: {}".format(avr_1, avr_2))
