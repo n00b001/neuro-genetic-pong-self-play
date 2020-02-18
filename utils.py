@@ -2,7 +2,6 @@ import datetime
 import os
 import pickle
 import random
-from copy import deepcopy
 
 import scoop
 
@@ -103,7 +102,7 @@ def create_model_from_hall_of_fame(hall_of_fame):
 
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
     diff = my_score - enemy_score
-    scaled_time = total_time / TIME_SCALER
+    scaled_time = total_time / TIME_SCALAR
     bonus_points = my_score * score_multiplier
     reward = (diff + bonus_points) / scaled_time
     return reward
@@ -116,13 +115,14 @@ def get_random_action(all_actions):
 def save_checkpoint(_population, hall_of_fame):
     cp = dict(
         population=_population,
-        hall_of_fame=deepcopy(hall_of_fame),
+        hall_of_fame=hall_of_fame,
         rndstate=random.getstate(),
         network_shape=NETWORK_SHAPE
     )
     os.makedirs("checkpoints/checkpoints", exist_ok=True)
     with open("checkpoints/checkpoints/c_{}.pkl".format(datetime.datetime.now().strftime('%H_%M_%S')), "wb") as cp_file:
         pickle.dump(cp, cp_file)
+    del cp
 
 
 def calculate_gene_size():

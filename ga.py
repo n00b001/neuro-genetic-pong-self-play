@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 
+import scoop
 from deap import base, tools, creator
 from scoop import futures
 
@@ -40,7 +41,7 @@ def load_latest_population():
 
 def load_population_from_file(checkpoint):
     global hall_of_fame, NETWORK_SHAPE
-    print("Loading: {}".format(checkpoint))
+    scoop.logging.info("Loading: {}".format(checkpoint))
     with open(checkpoint, "rb") as cp_file:
         cp = pickle.load(cp_file)
     _population = cp["population"]
@@ -65,9 +66,9 @@ def load_best_population():
                 best_score = population[0].fitness.values[0]
                 best_checkpoint = f
         except Exception as e:
-            print(e)
+            scoop.logging.error(e)
     if best_checkpoint is not None:
-        print("Loading best model: {}\nwith score: {}".format(best_checkpoint, best_score))
+        scoop.logging.info("Loading best model: {}\nwith score: {}".format(best_checkpoint, best_score))
         # We have to load "twice" because we need to load the hall of fame/NN structure
         return load_population_from_file(best_checkpoint)
     else:

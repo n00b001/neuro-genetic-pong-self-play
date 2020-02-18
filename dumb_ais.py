@@ -9,11 +9,11 @@ class HardcodedAi:
 
 
 class ScoreHardcodedAi:
-    def __int__(self):
+    def __init__(self):
         self.score_info = {}
 
     def set_score(self, score_info):
-        self.score_info = score_info
+        self.score_info.update(score_info)
 
     def run(self, input_vector):
         ret_val = [0, 0]

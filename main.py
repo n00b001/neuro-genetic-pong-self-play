@@ -18,27 +18,30 @@ def run_against_human(individual=None):
     right_model = create_model_from_genes(individual)
     left_model = HumanInput()
 
-    env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+    env = retro.make(GAME_NAME, state='Start.2P', players=2)
 
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
     perform_episode(env, left_model, right_model, True, 1)
 
 
+# @profile(precision=4)
 def evaluate(individual=None, render=RENDER):
     right_model = create_model_from_genes(individual)
 
     all_rewards = []
     right_score_multiplier = 1
     for i in range(GAMES_TO_PLAY):
-        env = None
-        left_model = None
+        env = GAME_2_PLAYER
+        left_model = HardcodedAi()
         try:
             if i == 0:
+                # HardcodedAi
+                # GAME_2_PLAYER
                 pass
             elif i == 1:
-                env = retro.make('Pong-Atari2600')
-            elif i == 2:
+                # ScoreHardcodedAi
+                # GAME_2_PLAYER
                 left_model = ScoreHardcodedAi()
             else:
                 if hall_of_fame is None:
@@ -47,19 +50,14 @@ def evaluate(individual=None, render=RENDER):
                     new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
                     if new_model is not None:
                         left_model = new_model
-            if env is None:
-                env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
-            if left_model is None:
-                left_model = HardcodedAi()
 
-            env.use_restricted_actions = retro.Actions.FILTERED
             env.reset()
 
             right_reward = perform_episode(env, left_model, right_model, render, right_score_multiplier)
             all_rewards.append(right_reward)
         finally:
-            env.close()
-            del env
+            # env.close()
+            # del env
             del left_model
 
     average_reward = sum(all_rewards) / float(GAMES_TO_PLAY)
@@ -168,10 +166,14 @@ def main():
             ngen=GENERATIONS_BEFORE_SAVE,
             stats=stats, halloffame=hall_of_fame, verbose=True
         )
-        scoop.logger.info(log)
+        # scoop.logger.info(log)
 
         save_checkpoint(ga.population, hall_of_fame)
+        del log
 
+
+# GAME_1_PLAYER.start()
+# GAME_2_PLAYER.start()
 
 toolbox.register("evaluate", evaluate)
 try:
