@@ -76,7 +76,7 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         if type(left_model) == ScoreHardcodedAi:
             left_model.set_score(score_info)
 
-        ball_location, left_location, right_location = find_stuff(observation)
+        ball_location, left_location, right_location = find_stuff_quickly(observation)
         del observation
         left_action, right_action = get_actions(
             ball_location, last_ball_location, left_location, left_model, right_location, right_model

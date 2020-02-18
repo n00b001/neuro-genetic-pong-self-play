@@ -31,7 +31,7 @@ def find_stuff_quickly(observation):
         locations[:, 1:], np.cumsum(np.unique(locations[:, 0], return_counts=True)[1])[:-1]
     )
 
-    if len(split) < 2:
+    if len(split) < 3:
         return np.array([None, None, None])
 
     ball_location = np.average(split[0], axis=0)
