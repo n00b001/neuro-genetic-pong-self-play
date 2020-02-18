@@ -1,4 +1,5 @@
 import numpy as np
+import scoop
 from scipy.stats import truncnorm
 
 
@@ -17,7 +18,7 @@ def ReLU_derivation(x):
         return 1
 
 
-@np.vectorize
+# @np.vectorize
 def sigmoid(x):
     return 1 / (1 + np.e ** -x)
 
@@ -40,27 +41,32 @@ class NeuralNetwork:
 
         self.nodes = nodes
         self.learning_rate = learning_rate
-        self.bias = bias
+        self.bias = 1 if bias else 0
+        self.last_weight = -1 if bias else None
+        self.list_of_transitional_arrays = [np.ones(n + bias) for n in nodes]
         if weights is None:
             self.weights = self.create_random_weight_matrices()
         else:
-            self.weights = self.load_weights(weights)
+            self.weights = self.populate_weights(weights)
 
-    def load_weights(self, weights):
+    def populate_weights(self, weights):
         index = 0
+
         _weights = []
         for i in range(len(self.nodes) - 1):
             input_node_amount = self.nodes[i]
             output_node_amount = self.nodes[i + 1]
 
-            number_of_numbers_to_take = input_node_amount * output_node_amount
-            matrix_weights = np.array(weights[index:index + number_of_numbers_to_take])
-            matrix_weights = matrix_weights.reshape(output_node_amount, input_node_amount)
+            number_of_numbers_number_to_take = (input_node_amount + self.bias) * output_node_amount
+            matrix_weights = np.array(weights[index:index + number_of_numbers_number_to_take])
+            # matrix_weights = matrix_weights.reshape(input_node_amount + self.bias, output_node_amount)
+            matrix_weights = matrix_weights.reshape(output_node_amount, input_node_amount + self.bias)
             _weights.append(matrix_weights)
-            index += number_of_numbers_to_take
+            index += number_of_numbers_number_to_take
         if index != len(weights):
-            print(f"Not all weights loaded!\n Loaded: {index} weights")
-        return np.array(_weights)
+            scoop.logger.warn("Not all weights loaded!\n Loaded: {} weights".format(index))
+        # return np.array(_weights)
+        return _weights
 
     def create_random_weight_matrices(self):
         """ A method to initialize the weight matrices of the neural
@@ -73,7 +79,7 @@ class NeuralNetwork:
             rad = 1 / np.sqrt(self.nodes[i] + bias_node)
             X = truncated_normal(mean=0, sd=1, low=-rad, upp=rad)
             weights.append(X.rvs((self.nodes[i + 1], self.nodes[i] + bias_node)))
-        return np.array(weights)
+        return weights
 
     def train(self, input_vector, target_vector):
         # input_vector and target_vector can be tuple, list or ndarray
@@ -112,20 +118,23 @@ class NeuralNetwork:
             w += self.learning_rate * x
 
     def run(self, input_vector):
-        # input_vector can be tuple, list or ndarray
+        if len(input_vector) != self.list_of_transitional_arrays[0][:self.last_weight].shape[0]:
+            raise Exception("input vector wrong shape")
 
-        if self.bias:
-            # adding bias node to the end of the inpuy_vector
-            input_vector = np.concatenate((input_vector, [1]))
-        input_vector = np.array(input_vector, ndmin=2).T
+        self.list_of_transitional_arrays[0][:len(input_vector)] = input_vector
 
-        for w in self.weights:
-            input_vector = np.dot(w, input_vector)
-            input_vector = activation_function(input_vector)
+        for i, w in enumerate(self.weights[:]):
+            self.list_of_transitional_arrays[i + 1][:self.last_weight] = np.dot(w, self.list_of_transitional_arrays[i])
+            self.list_of_transitional_arrays[i + 1][:self.last_weight] = \
+                activation_function(self.list_of_transitional_arrays[i + 1][:self.last_weight])
 
-            if self.bias:
-                input_vector = np.concatenate((input_vector, [[self.bias]]))
-        return np.squeeze(input_vector)
+        inx = np.argmax(np.squeeze(self.list_of_transitional_arrays[-1][:self.last_weight]))
+        if inx == 0:
+            return [1, 0]
+        elif inx == 1:
+            return [0, 1]
+        else:
+            raise Exception("Shouldn't happen")
 
 
 def main():
@@ -142,7 +151,7 @@ def main():
         labeled_data.append([el, [0, 1]])
 
     np.random.shuffle(labeled_data)
-    print(labeled_data[:10])
+    scoop.logger.info(labeled_data[:10])
 
     data, labels = zip(*labeled_data)
     labels = np.array(labels)
@@ -157,9 +166,9 @@ def main():
         for i in range(len(data)):
             simple_network.train(data[i], labels[i])
     for i in range(len(data)):
-        print(f"label: {labels[i]}")
+        scoop.logger.info("label: {}".format(labels[i]))
         output = simple_network.run(data[i])
-        print(f"output: {output}")
+        scoop.logger.info("output: {}".format(output))
 
 
 if __name__ == '__main__':

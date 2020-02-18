@@ -1,152 +1,89 @@
-import datetime
-import glob
-import os
-import pickle
-import random
 import time
 
-import cv2
 import retro
-from deap import base, algorithms
-from deap import creator
+from deap import algorithms
 from deap import tools
-from scoop import futures
 
-from config import *
-from numpy_nn import NeuralNetwork
-
-
-def eval(individual):
-    return evaluate(individual, RENDER)
-
-
-creator.create("Fitness", base.Fitness, weights=(1.0,))
-creator.create("Individual", list, fitness=creator.Fitness)
-
-toolbox = base.Toolbox()
-toolbox.register("map", futures.map)
-
-toolbox.register("attr_float", random.random)
-toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=GENE_SIZE)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutGaussian, mu=MU, sigma=SIGMA, indpb=IND_PB)
-toolbox.register("select", tools.selTournament, tournsize=TOURN_SIZE)
-
-toolbox.register("evaluate", eval)
-
-
-def find_stuff(observation):
-    small_img = cv2.resize(
-        observation,
-        (observation.shape[1] // SCALE_FACTOR, observation.shape[0] // SCALE_FACTOR),
-        interpolation=cv2.INTER_NEAREST
-    )
-    chopped_observation = small_img[GAME_TOP // SCALE_FACTOR:GAME_BOTTOM // SCALE_FACTOR, :]
-    ball_location = get_rect(chopped_observation, BALL_COLOUR)
-    left_location = get_rect(chopped_observation, LEFT_GUY_COLOUR)
-    right_location = get_rect(chopped_observation, RIGHT_GUY_COLOUR)
-    return ball_location, left_location, right_location
-
-
-def get_rect(chopped_observation, colour):
-    indices = np.where(np.all(chopped_observation == colour, axis=-1))
-    if len(indices[0]) == 0:
-        return None
-    return np.average(indices, axis=1)
-
-
-def inferrance(ball_location, me, enemy, model: NeuralNetwork):
-    if model is not None:
-        normalised_ball_location_x = ball_location[1] / GAME_WIDTH
-        normalised_ball_location_y = ball_location[0] / GAME_PLAYABLE_HEIGHT
-        normalised_me = me[0] / GAME_PLAYABLE_HEIGHT
-        normalised_enemy = enemy[0] / GAME_PLAYABLE_HEIGHT
-        predictions = model.run(
-            [normalised_ball_location_x, normalised_ball_location_y, normalised_me, normalised_enemy])
-        inx = np.argmax(predictions)
-        return_arr = np.zeros(shape=predictions.shape, dtype=np.int)
-        return_arr[inx] = 1
-        return return_arr
-    ret_val = [0, 0]
-    if ball_location[0] < me[0]:
-        ret_val[0] = 1
-    elif ball_location[0] > me[0]:
-        ret_val[1] = 1
-    return ret_val
-
+import ga
+from dumb_ais import HardcodedAi, ScoreHardcodedAi
+from ga import toolbox, hall_of_fame
+from human_control import HumanInput
+from utils import *
+from utils import inference
 
 """:arg action[0] is up, action[1] is down"""
 
 
-def keep_within_game_bounds_please(paddle, action):
-    if paddle is not None:
-        if paddle[0] < SCALED_PADDLE_HEIGHT:
-            action = [0, 1]
-        elif paddle[0] > (((GAME_BOTTOM - GAME_TOP) / SCALE_FACTOR) - SCALED_PADDLE_HEIGHT):
-            action = [1, 0]
-    return action
+def run_against_human(individual=None):
+    right_model = create_model_from_genes(individual)
+    left_model = HumanInput()
 
+    env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
-def load_model_from_genes(individual):
-    nodes = [4, 4, 2]
-
-    simple_network = NeuralNetwork(
-        nodes=nodes,
-        weights=individual
-    )
-
-    return simple_network
-
-
-def evaluate(individual=None, render=False):
-    # env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
-    env = retro.make('Pong-Atari2600')
     env.use_restricted_actions = retro.Actions.FILTERED
     env.reset()
+    perform_episode(env, left_model, right_model, True, 1)
 
-    left_model = None
-    right_model = load_model_from_genes(individual)
 
-    st = time.time()
-    total_score = []
+def evaluate(individual=None, render=RENDER):
+    right_model = create_model_from_genes(individual)
+
+    all_rewards = []
+    right_score_multiplier = 1
     for i in range(GAMES_TO_PLAY):
-        score_info = perform_episode(env, left_model, right_model, render)
-        total_score.append(score_info)
+        env = None
+        left_model = None
+        try:
+            if i == 0:
+                pass
+            elif i == 1:
+                env = retro.make('Pong-Atari2600')
+            elif i == 2:
+                left_model = ScoreHardcodedAi()
+            else:
+                if hall_of_fame is None:
+                    pass
+                else:
+                    new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                    if new_model is not None:
+                        left_model = new_model
+            if env is None:
+                env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+            if left_model is None:
+                left_model = HardcodedAi()
 
-    total_score = np.array(total_score)
-    left_total_score = sum(total_score[:, 0])
-    right_total_score = sum(total_score[:, 1])
-    relative_score = right_total_score - left_total_score
-    average_score = relative_score / float(GAMES_TO_PLAY)
+            env.use_restricted_actions = retro.Actions.FILTERED
+            env.reset()
 
-    # print(f"{time.time() - st} seconds duration")
-    # print(f"left_total_score: {left_total_score}")
-    # print(f"right_total_score: {right_total_score}")
-    # print(f"relative_score: {relative_score}")
+            right_reward = perform_episode(env, left_model, right_model, render, right_score_multiplier)
+            all_rewards.append(right_reward)
+        finally:
+            env.close()
+            del env
+            del left_model
 
-    if render:
-        env.close()
-    return average_score,
+    average_reward = sum(all_rewards) / float(GAMES_TO_PLAY)
+    return average_reward,
 
 
-def perform_episode(env, left_model, right_model, render):
+def perform_episode(env, left_model, right_model, render, score_multiplier):
     last_score = None
     action = np.copy(BLANK_ACTION)
-    timeout_counter = 0
+    timeout_counter = 0.0
+    total_frames = 0.0
+    last_ball_location = None
+    st = time.time()
     while True:
         observation, reward, is_done, score_info = env.step(action)
+        if type(left_model) == ScoreHardcodedAi:
+            left_model.set_score(score_info)
 
         ball_location, left_location, right_location = find_stuff(observation)
-        left_action = get_random_action(ALL_ACTIONS)
-        right_action = get_random_action(ALL_ACTIONS)
-
-        if ball_location is not None:
-            if left_location is not None:
-                left_action = inferrance(ball_location, left_location, right_location, left_model)
-            if right_location is not None:
-                right_action = inferrance(ball_location, right_location, left_location, right_model)
+        del observation
+        left_action, right_action = get_actions(
+            ball_location, last_ball_location, left_location, left_model, right_location, right_model
+        )
+        last_ball_location = ball_location
 
         left_action_restricted = keep_within_game_bounds_please(left_location, left_action)
         right_action_restricted = keep_within_game_bounds_please(right_location, right_action)
@@ -154,58 +91,70 @@ def perform_episode(env, left_model, right_model, render):
         action[RIGHT_ACTION_START:RIGHT_ACTION_END] = right_action_restricted
         action[RIGHT_ACTION_END:LEFT_ACTION_END] = left_action_restricted
 
-        if last_score is not None:
-            if last_score == score_info:
-                timeout_counter += 1
-            else:
-                timeout_counter = 0
+        timeout_counter, total_frames = calculate_timeout_and_frames(
+            last_score, score_info, timeout_counter, total_frames
+        )
         last_score = score_info
 
         if render:
-            env.render()
-            time.sleep(1.0 / FPS)
+            st = render_game(env, st)
 
+        if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
+            break
         if is_done:
             break
         if timeout_counter > TIMEOUT_THRESH:
             break
     env.reset()
-    # print(score_info)
-    return [score_info["score1"], score_info["score2"]]
+    if score_info["score1"] == score_info["score2"]:
+        return 0
+    right_reward = calculate_reward(score_multiplier, total_frames, score_info["score2"], score_info["score1"])
+    return right_reward
 
 
-def get_random_action(all_actions):
-    return all_actions[np.random.choice(all_actions.shape[0], size=None, replace=False), :]
+def render_game(env, st):
+    rgb = env.render('rgb_array')
+    # gets choppy when scaled over 4,4 for me
+    upscaled = repeat_upsample(rgb, 4, 4)
+    viewer.imshow(upscaled)
+    desired_sleep_time = 1.0 / FPS
+    calculation_duration = time.time() - st
+    actual_sleep_time = max(desired_sleep_time - calculation_duration, 0)
+    time.sleep(actual_sleep_time)
+    st = time.time()
+    return st
 
 
-def load_or_create_pop():
-    list_of_files = glob.glob('checkpoints/*')
-    if len(list_of_files) > 0:
-        checkpoint = max(list_of_files, key=os.path.getctime)
-    else:
-        checkpoint = None
-
-    if checkpoint:
-        print("A file name has been given, then load the data from the file")
-        with open(checkpoint, "rb") as cp_file:
-            cp = pickle.load(cp_file)
-        _population = cp["population"]
-        _sorted_population = sorted(_population, key=lambda x: x.fitness.values[0], reverse=True)
-        if len(_population) < POPULATION_SIZE:
-            population = toolbox.population(n=POPULATION_SIZE)
-            population[:len(_sorted_population)] = _sorted_population
+def calculate_timeout_and_frames(last_score, score_info, timeout_counter, total_frames):
+    if last_score is not None:
+        if last_score == score_info:
+            timeout_counter += 1.0
         else:
-            population = _sorted_population[:POPULATION_SIZE]
-        random.setstate(cp["rndstate"])
+            total_frames += timeout_counter
+            timeout_counter = 0.0
+    return timeout_counter, total_frames
+
+
+def get_actions(ball_location, last_ball_location, left_location, left_model, right_location, right_model):
+    left_action = get_random_action(ALL_ACTIONS)
+    right_action = get_random_action(ALL_ACTIONS)
+    if last_ball_location is None:
+        last_ball_location = ball_location
+    if ball_location is not None:
+        if left_location is not None:
+            # here we are flipping X
+            left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
+            left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
+            left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
+        if right_location is not None:
+            right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
     else:
-        print("Start a new evolution")
-    return population
+        left_action = [0, 0]
+        right_action = [0, 0]
+    return left_action, right_action
 
 
 def main():
-    population = load_or_create_pop()
-
-    hall_of_fame = tools.HallOfFame(HALL_OF_FAME_AMOUNT)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
     stats.register("std", np.std)
@@ -213,25 +162,24 @@ def main():
     stats.register("max", np.max)
 
     while True:
-        population, log = algorithms.eaSimple(
-            population, toolbox, cxpb=CX_PB, mutpb=MUT_PB, ngen=N_GENS,
+        ga.population, log = algorithms.eaSimple(
+            ga.population, toolbox,
+            cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
+            ngen=GENERATIONS_BEFORE_SAVE,
             stats=stats, halloffame=hall_of_fame, verbose=True
         )
+        scoop.logger.info(log)
 
-        save_checkpoint(population)
+        save_checkpoint(ga.population, hall_of_fame)
 
 
-def save_checkpoint(population):
-    cp = dict(
-        population=population,
-        rndstate=random.getstate()
-    )
-    os.makedirs("checkpoints", exist_ok=True)
-    with open(f"checkpoints/checkpoint_{datetime.datetime.now().strftime('%H_%M_%S')}.pkl", "wb") as cp_file:
-        pickle.dump(cp, cp_file)
+toolbox.register("evaluate", evaluate)
+try:
+    from gym.envs.classic_control import rendering
 
+    viewer = rendering.SimpleImageViewer()
+except Exception as e:
+    scoop.logger.error(e)
 
 if __name__ == '__main__':
     main()
-    # individual = [0.45166043246976356, 1.0131873834425835, 0.4548966304383305, 1.049285360057891, 0.04790764045279524, -0.04799704016690026, 0.3759395605860322, -0.0328326609370036, 0.36523007241571503, 0.030259432842876938, 0.7775061965238808, 0.25896916543285564, 0.6931445173729602, 0.8506462374766993, 0.04424946622071191, 0.9408616565546967, 0.13132296262550366, 0.7940050269702555, 0.8645860937500492, 0.6886954843500778, 0.7122791817651364, 0.3164679781875281, 0.3999678493264221, 0.8779594039734829]
-    # evaluate(individual=individual, render=True)
