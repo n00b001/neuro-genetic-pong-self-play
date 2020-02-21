@@ -159,17 +159,16 @@ def main():
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    while True:
-        ga.population, log = algorithms.eaSimple(
-            ga.population, toolbox,
-            cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
-            ngen=GENERATIONS_BEFORE_SAVE,
-            stats=stats, halloffame=hall_of_fame, verbose=True
-        )
-        # scoop.logger.info(log)
+    ga.population, log = algorithms.eaSimple(
+        ga.population, toolbox,
+        cxpb=CROSSOVER_BLEND_PROBABILITY, mutpb=GAUSSIAN_MUTATION_PROBABILITY,
+        ngen=GENERATIONS_BEFORE_SAVE,
+        stats=stats, halloffame=hall_of_fame, verbose=True
+    )
+    # scoop.logger.info(log)
 
-        save_checkpoint(ga.population, hall_of_fame)
-        del log
+    save_checkpoint(ga.population, hall_of_fame)
+    del log
 
 
 # GAME_1_PLAYER.start()
