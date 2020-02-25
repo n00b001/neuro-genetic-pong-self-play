@@ -1,13 +1,14 @@
 import pygame
 from pygame.locals import *
-from config import *
+from game_config import *
+from config import RIGHT_ACTION_START, RIGHT_ACTION_END, LEFT_ACTION_END
 from human_controls import HumanPlayer1, HumanPlayer2
-from hardcoded_ai import HardcodedAi
+# from hardcoded_ai import HardcodedAi
 import random
 import math as maths
 
 
-class App:
+class MyPong:
     def __init__(self, player_one, player_two):
         self._running = True
         self.display_surf = None
@@ -129,8 +130,14 @@ class App:
             self.on_render()
         self.on_cleanup()
 
-    def step(self):
-        self.on_loop()
+    def step(self, control):
+        self.left_paddle = self.move_paddle(self.left_paddle, control[RIGHT_ACTION_START:RIGHT_ACTION_END])
+        self.right_paddle = self.move_paddle(self.right_paddle, control[RIGHT_ACTION_START:RIGHT_ACTION_END])
+
+        self.left_paddle = self.limit_paddles(self.left_paddle)
+        self.right_paddle = self.limit_paddles(self.right_paddle)
+        self.ball = self.ball.move(self.ball_velocity)
+        self.bounce_ball()
 
 
 if __name__ == "__main__":
