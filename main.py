@@ -1,27 +1,30 @@
 import time
 
-import retro
+# import retro
 from deap import algorithms
 from deap import tools
 
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
 from ga import toolbox, hall_of_fame
-from human_control import HumanInput
+# from human_control import HumanInput
+from human_controls import HumanPlayer1
 from utils import *
 from utils import inference
+from my_intense_pong import MyPong
 
 """:arg action[0] is up, action[1] is down"""
 
 
 def run_against_human(individual=None):
     right_model = create_model_from_genes(individual)
-    left_model = HumanInput()
+    left_model = HumanPlayer1()
 
-    env = retro.make(GAME_NAME, state='Start.2P', players=2)
-
-    env.use_restricted_actions = retro.Actions.FILTERED
-    env.reset()
+    # env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
+    #
+    # env.use_restricted_actions = retro.Actions.FILTERED
+    # env.reset()
+    env = MyPong()
     perform_episode(env, left_model, right_model, True, 1)
 
 

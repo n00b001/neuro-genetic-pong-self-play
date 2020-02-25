@@ -5,3 +5,5 @@ numpy==1.18.1
 scoop==0.7.1.1
 pynput==1.6.7
 numpy_indexed==0.3.5
+pynput
+pygame
