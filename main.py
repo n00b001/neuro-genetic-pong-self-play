@@ -1,13 +1,14 @@
 import time
 
-import retro
+# import retro
 from deap import algorithms
 from deap import tools
 
 import ga
 from dumb_ais import HardcodedAi, ScoreHardcodedAi
 from ga import toolbox, hall_of_fame
-from human_control import HumanInput
+# from human_control import HumanInput
+from human_controls import HumanPlayer1
 from utils import *
 from utils import inference
 
@@ -16,7 +17,7 @@ from utils import inference
 
 def run_against_human(individual=None):
     right_model = create_model_from_genes(individual)
-    left_model = HumanInput()
+    left_model = HumanPlayer1()
 
     env = retro.make('Pong-Atari2600', state='Start.2P', players=2)
 
