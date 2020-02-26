@@ -1,13 +1,12 @@
 import time
 
-# import retro
 from deap import algorithms
 from deap import tools
 
 import ga
-from dumb_ais import HardcodedAi, ScoreHardcodedAi
+from dumb_ais import ScoreHardcodedAi, RandomHardcodedAi
 from ga import toolbox, hall_of_fame
-# from human_control import HumanInput
+from my_intense_pong import MyPong
 from numpy_nn import create_model_from_genes, create_model_from_hall_of_fame
 from utils import *
 from utils import get_actions
@@ -20,34 +19,22 @@ def evaluate(individual=None, render=RENDER):
     right_model = create_model_from_genes(individual)
 
     all_rewards = []
-    right_score_multiplier = 1
     for i in range(GAMES_TO_PLAY):
-        env = GAME_2_PLAYER
-        left_model = HardcodedAi()
         try:
-            if i == 0:
-                # HardcodedAi
-                # GAME_2_PLAYER
-                pass
-            elif i == 1:
-                # ScoreHardcodedAi
-                # GAME_2_PLAYER
-                left_model = ScoreHardcodedAi()
-            else:
-                if hall_of_fame is None:
-                    pass
-                else:
-                    new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
-                    if new_model is not None:
-                        left_model = new_model
+            random_thresh = i * (1 / float(NUMBER_OF_HARD_CODED_RANDOM_AIS))
+            left_model = RandomHardcodedAi(random_thresh=random_thresh)
+            right_score_multiplier = random_thresh
 
-            env.reset()
+            if random_thresh > 1 and hall_of_fame is not None:
+                new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                if new_model is not None:
+                    left_model = new_model
 
-            right_reward = perform_episode(env, left_model, right_model, render, right_score_multiplier)
+            ENV.reset()
+
+            right_reward = perform_episode(ENV, left_model, right_model, render, right_score_multiplier)
             all_rewards.append(right_reward)
         finally:
-            # env.close()
-            # del env
             del left_model
 
     average_reward = sum(all_rewards) / float(GAMES_TO_PLAY)
@@ -57,8 +44,8 @@ def evaluate(individual=None, render=RENDER):
 def perform_episode(env, left_model, right_model, render, score_multiplier):
     last_score = None
     actions = {
-        "player1":Direction.NOOP,
-        "player2":Direction.NOOP
+        "player1": Direction.NOOP,
+        "player2": Direction.NOOP
     }
     timeout_counter = 0.0
     total_frames = 0.0
@@ -68,9 +55,9 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         observation, _, is_done, score_info = env.step(actions)
         if type(left_model) == ScoreHardcodedAi:
             left_model.set_score(score_info)
+        if type(right_model) == ScoreHardcodedAi:
+            right_model.set_score(score_info)
 
-        # ball_location, left_location, right_location = find_stuff_quickly(observation)
-        # del observation
         left_action, right_action = get_actions(
             observation[0], last_ball_location, observation[1], left_model, observation[2], right_model
         )
@@ -85,7 +72,7 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         last_score = score_info
 
         if render:
-            st = render_game(env, st)
+            st = render_game(env, st, left_model, right_model)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break
@@ -101,8 +88,8 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
     return right_reward
 
 
-def render_game(env, st):
-    env.render()
+def render_game(env, st, left_class=None, right_class=None):
+    env.render(left_class, right_class)
     # gets choppy when scaled over 4,4 for me
     # upscaled = repeat_upsample(rgb, 4, 4)
     # viewer.imshow(upscaled)
@@ -144,8 +131,9 @@ def main():
 
 
 # GAME_1_PLAYER.start()
-# GAME_2_PLAYER.start()
+# GAME_2_PLAYER.start(
 
+ENV = MyPong(RENDER)
 toolbox.register("evaluate", evaluate)
 try:
     from gym.envs.classic_control import rendering

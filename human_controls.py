@@ -56,6 +56,9 @@ class HumanPlayer1:
             ret_val = Direction.NOOP
         return ret_val
 
+    def __str__(self):
+        return "HumanPlayer1"
+
 
 class HumanPlayer2:
 
@@ -70,3 +73,6 @@ class HumanPlayer2:
         else:
             ret_val = Direction.NOOP
         return ret_val
+
+    def __str__(self):
+        return "HumanPlayer2"

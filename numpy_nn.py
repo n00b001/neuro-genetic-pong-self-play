@@ -10,13 +10,13 @@ from utils import Direction
 
 @np.vectorize
 # alternative activation function
-def ReLU(x):
+def relu(x):
     return np.maximum(0.0, x)
 
 
 @np.vectorize
 # derivation of relu
-def ReLU_derivation(x):
+def relu_derivation(x):
     if x <= 0:
         return 0
     else:
@@ -64,13 +64,11 @@ class NeuralNetwork:
 
             number_of_numbers_number_to_take = (input_node_amount + self.bias) * output_node_amount
             matrix_weights = np.array(weights[index:index + number_of_numbers_number_to_take])
-            # matrix_weights = matrix_weights.reshape(input_node_amount + self.bias, output_node_amount)
             matrix_weights = matrix_weights.reshape(output_node_amount, input_node_amount + self.bias)
             _weights.append(matrix_weights)
             index += number_of_numbers_number_to_take
         if index != len(weights):
             scoop.logger.warn("Not all weights loaded!\n Loaded: {} weights".format(index))
-        # return np.array(_weights)
         return _weights
 
     def create_random_weight_matrices(self):
@@ -141,6 +139,9 @@ class NeuralNetwork:
         else:
             raise Exception("Shouldn't happen")
         return ret_val
+
+    def __str__(self):
+        return "NeuralNetwork"
 
 
 def main():
