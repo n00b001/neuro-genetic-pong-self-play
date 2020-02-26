@@ -1,4 +1,5 @@
-# neuro-genetic-pong-self-play
+# Genetic Algorithm trained Self Playing Implemented Neural Network:
+## aka: GASPINN
 to install dependencies: 
 python -m pip install --upgrade -r requirements.txt
 

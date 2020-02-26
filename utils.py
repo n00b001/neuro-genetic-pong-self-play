@@ -2,12 +2,18 @@ import datetime
 import os
 import pickle
 import random
+from enum import Enum
 
 import scoop
 
 from config import *
-from config import GAME_WIDTH, GAME_PLAYABLE_HEIGHT
-from numpy_nn import NeuralNetwork
+from config import GAME_WIDTH, GAME_PLAYABLE_HEIGHT, ALL_ACTIONS
+
+
+class Direction(Enum):
+    UP = [1, 0]
+    DOWN = [0, 1]
+    NOOP = [0, 0]
 
 
 def find_stuff(observation):
@@ -76,30 +82,6 @@ def keep_within_game_bounds_please(paddle, action):
     return action
 
 
-def create_model_from_genes(individual):
-    simple_network = NeuralNetwork(
-        nodes=NETWORK_SHAPE,
-        weights=individual,
-        bias=BIAS
-    )
-
-    return simple_network
-
-
-def create_model_from_hall_of_fame(hall_of_fame):
-    left_model = None
-    right_score_multiplier = 1
-    hall_of_fame_items = hall_of_fame.items
-    if len(hall_of_fame_items) != 0:
-        random.shuffle(hall_of_fame_items)
-        for hall_of_famer in hall_of_fame_items:
-            if hall_of_famer.fitness.valid:
-                right_score_multiplier = hall_of_famer.fitness.values[0]
-                left_model = create_model_from_genes(list(hall_of_famer))
-                break
-    return left_model, right_score_multiplier
-
-
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALAR
@@ -166,3 +148,22 @@ def repeat_upsample(rgb_array, k=1, l=1, err=[]):
     # if the input image is of shape (m,n,3), the output image will be of shape (k*m, l*n, 3)
 
     return np.repeat(np.repeat(rgb_array, k, axis=0), l, axis=1)
+
+
+def get_actions(ball_location, last_ball_location, left_location, left_model, right_location, right_model):
+    left_action = get_random_action(ALL_ACTIONS)
+    right_action = get_random_action(ALL_ACTIONS)
+    if last_ball_location is None:
+        last_ball_location = ball_location
+    if ball_location is not None:
+        if left_location is not None:
+            # here we are flipping X
+            left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
+            left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
+            left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
+        if right_location is not None:
+            right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
+    else:
+        left_action = Direction.NOOP
+        right_action = Direction.NOOP
+    return left_action, right_action

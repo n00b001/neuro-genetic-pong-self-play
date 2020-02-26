@@ -1,11 +1,28 @@
+from utils import Direction
+
+
 class HardcodedAi:
     def run(self, input_vector):
-        ret_val = [0, 0]
+        """
+        :param input_vector: [
+            normalised_ball_location_x,
+            normalised_ball_location_y,
+            normalised_last_ball_location_x,
+            normalised_last_ball_location_y,
+            normalised_me,
+            normalised_enemy
+        ]
+        :type input_vector:
+        :return: action[0] is up, action[1] is down"
+        :rtype:
+        """
         if input_vector[1] < input_vector[4]:
-            ret_val[0] = 1
+            return_val = Direction.UP
         elif input_vector[1] > input_vector[4]:
-            ret_val[1] = 1
-        return ret_val
+            return_val = Direction.DOWN
+        else:
+            return_val = Direction.NOOP
+        return return_val
 
 
 class ScoreHardcodedAi:
@@ -16,10 +33,23 @@ class ScoreHardcodedAi:
         self.score_info.update(score_info)
 
     def run(self, input_vector):
-        ret_val = [0, 0]
+        """
+        :param input_vector: [
+            normalised_ball_location_x,
+            normalised_ball_location_y,
+            normalised_last_ball_location_x,
+            normalised_last_ball_location_y,
+            normalised_me,
+            normalised_enemy
+        ]
+        :type input_vector:
+        :return: action[0] is up, action[1] is down"
+        :rtype:
+        """
+        return_val = Direction.NOOP
         if self.score_info["score1"] <= self.score_info["score2"]:
             if input_vector[1] < input_vector[4]:
-                ret_val[0] = 1
+                return_val = Direction.UP
             elif input_vector[1] > input_vector[4]:
-                ret_val[1] = 1
-        return ret_val
+                return_val = Direction.DOWN
+        return return_val

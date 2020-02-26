@@ -1,5 +1,7 @@
 from pynput import keyboard
 
+from utils import Direction
+
 button_w = 0
 button_s = 1
 button_up = 2
@@ -46,7 +48,13 @@ class HumanPlayer1:
         self.input_thing = HumanInput()
 
     def run(self, input_vector=None):
-        return [self.input_thing.button_list[button_w], self.input_thing.button_list[button_s]]
+        if self.input_thing.button_list[button_w]:
+            ret_val = Direction.UP
+        elif self.input_thing.button_list[button_s]:
+            ret_val = Direction.DOWN
+        else:
+            ret_val = Direction.NOOP
+        return ret_val
 
 
 class HumanPlayer2:
@@ -55,4 +63,10 @@ class HumanPlayer2:
         self.input_thing = HumanInput()
 
     def run(self, input_vector=None):
-        return [self.input_thing.button_list[button_up], self.input_thing.button_list[button_down]]
+        if self.input_thing.button_list[button_w]:
+            ret_val = Direction.UP
+        elif self.input_thing.button_list[button_s]:
+            ret_val = Direction.DOWN
+        else:
+            ret_val = Direction.NOOP
+        return ret_val

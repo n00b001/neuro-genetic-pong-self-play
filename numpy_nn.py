@@ -1,6 +1,11 @@
+import random
+
 import numpy as np
 import scoop
 from scipy.stats import truncnorm
+
+from config import NETWORK_SHAPE, BIAS
+from utils import Direction
 
 
 @np.vectorize
@@ -130,11 +135,12 @@ class NeuralNetwork:
 
         inx = np.argmax(np.squeeze(self.list_of_transitional_arrays[-1][:self.last_weight]))
         if inx == 0:
-            return [1, 0]
+            ret_val = Direction.UP
         elif inx == 1:
-            return [0, 1]
+            ret_val = Direction.DOWN
         else:
             raise Exception("Shouldn't happen")
+        return ret_val
 
 
 def main():
@@ -173,3 +179,27 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+def create_model_from_genes(individual):
+    simple_network = NeuralNetwork(
+        nodes=NETWORK_SHAPE,
+        weights=individual,
+        bias=BIAS
+    )
+
+    return simple_network
+
+
+def create_model_from_hall_of_fame(hall_of_fame):
+    left_model = None
+    right_score_multiplier = 1
+    hall_of_fame_items = hall_of_fame.items
+    if len(hall_of_fame_items) != 0:
+        random.shuffle(hall_of_fame_items)
+        for hall_of_famer in hall_of_fame_items:
+            if hall_of_famer.fitness.valid:
+                right_score_multiplier = hall_of_famer.fitness.values[0]
+                left_model = create_model_from_genes(list(hall_of_famer))
+                break
+    return left_model, right_score_multiplier
