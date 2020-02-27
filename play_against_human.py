@@ -1,5 +1,5 @@
 from dumb_ais import RandomHardcodedAi
-from ga import load_latest_population
+from ga import load_latest_population, load_best_population
 from human_controls import HumanPlayer1
 from main import perform_episode
 from my_intense_pong import MyPong
@@ -8,6 +8,7 @@ from numpy_nn import create_model_from_genes
 
 def main():
     population = load_latest_population()
+    population = load_best_population()
     if population is None or len(population) == 0:
         individual = None
     else:

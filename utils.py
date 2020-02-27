@@ -10,7 +10,7 @@ def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
     diff = my_score - enemy_score
     scaled_time = total_time / TIME_SCALAR
     bonus_points = my_score * score_multiplier
-    reward = (diff + bonus_points) / scaled_time
+    reward = (diff / scaled_time)
     return reward
 
 

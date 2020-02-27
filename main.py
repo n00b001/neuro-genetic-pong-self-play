@@ -25,7 +25,7 @@ def evaluate(individual=None, render=RENDER):
             left_model = RandomHardcodedAi(random_thresh=random_thresh)
 
             # 0:-1, 1:-0.5, 2:-0.33, 3: -0.25, 9:-0.1
-            right_bonus_score_multiplier = -(1 / (i + 1))
+            right_bonus_score_multiplier = 1 - random_thresh
 
             if random_thresh > 1 and hall_of_fame is not None:
                 new_model, right_bonus_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)

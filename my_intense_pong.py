@@ -37,10 +37,11 @@ class MyPong:
 
     def randomise_ball_vel(self):
         # https://stackoverflow.com/questions/6824681/get-a-random-boolean-in-python
+        random_offset = random.random() - 0.5
         if bool(random.getrandbits(1)):
-            ball_direction = 0.0
+            ball_direction = 0.0 + random_offset
         else:
-            ball_direction = maths.pi
+            ball_direction = maths.pi + random_offset
         self.ball_velocity = [
             maths.cos(float(ball_direction)) * float(BALL_SPEED),
             maths.sin(float(ball_direction)) * float(BALL_SPEED)
@@ -79,12 +80,14 @@ class MyPong:
         return paddle
 
     def bounce_ball(self):
+        collide = False
         if self.ball.top < 0:
             self.ball_velocity[1] = abs(self.ball_velocity[1])
+            collide = True
         elif self.ball.bottom > GAME_HEIGHT:
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
+            collide = True
 
-        collide = False
         if self.ball.colliderect(self.left_paddle):
             self.ball_paddle_redirect(self.left_paddle)
             collide = True
@@ -119,8 +122,8 @@ class MyPong:
         self.randomise_ball_vel()
 
     def restart_paddles(self):
-        self.left_paddle.centery = GAME_HEIGHT / 2.0
-        self.right_paddle.centery = GAME_HEIGHT / 2.0
+        self.left_paddle.centery = random.randrange(0, GAME_HEIGHT)
+        self.right_paddle.centery = random.randrange(0, GAME_HEIGHT)
 
     def reset(self):
         self._running = self.on_init()
