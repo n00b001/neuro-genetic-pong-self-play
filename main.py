@@ -1,5 +1,6 @@
 import time
 
+import numpy as np
 from deap import algorithms
 from deap import tools
 
@@ -9,7 +10,6 @@ from ga import toolbox, hall_of_fame
 from my_intense_pong import MyPong
 from numpy_nn import create_model_from_genes, create_model_from_hall_of_fame
 from utils import *
-from utils import get_actions
 
 """:arg action[0] is up, action[1] is down"""
 
@@ -23,16 +23,18 @@ def evaluate(individual=None, render=RENDER):
         try:
             random_thresh = i * (1 / float(NUMBER_OF_HARD_CODED_RANDOM_AIS))
             left_model = RandomHardcodedAi(random_thresh=random_thresh)
-            right_score_multiplier = random_thresh
+
+            # 0:-1, 1:-0.5, 2:-0.33, 3: -0.25, 9:-0.1
+            right_bonus_score_multiplier = -(1 / (i + 1))
 
             if random_thresh > 1 and hall_of_fame is not None:
-                new_model, right_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
+                new_model, right_bonus_score_multiplier = create_model_from_hall_of_fame(hall_of_fame)
                 if new_model is not None:
                     left_model = new_model
 
             ENV.reset()
 
-            right_reward = perform_episode(ENV, left_model, right_model, render, right_score_multiplier)
+            right_reward = perform_episode(ENV, left_model, right_model, render, right_bonus_score_multiplier)
             all_rewards.append(right_reward)
         finally:
             del left_model

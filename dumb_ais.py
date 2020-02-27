@@ -1,6 +1,7 @@
 import random
 
-from utils import Direction
+from config import *
+from utils import get_random_action3
 
 
 class RandomHardcodedAi:
@@ -22,17 +23,22 @@ class RandomHardcodedAi:
         :rtype:
         """
         if random.random() < self.random_thresh:
-            if input_vector[1] < input_vector[4]:
-                return_val = Direction.UP
-            elif input_vector[1] > input_vector[4]:
-                return_val = Direction.DOWN
-            else:
-                return_val = Direction.NOOP
+            return_val = up_down_noop_logic(input_vector)
             return return_val
-        return random.choice(list(Direction))
+        return get_random_action3()
 
     def __str__(self):
-        return "RandomHardcodedAi:{}".format(self.random_thresh)
+        return "RHCAI:{}".format(self.random_thresh)
+
+
+def up_down_noop_logic(input_vector):
+    if input_vector[1] < input_vector[4] - ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
+        return_val = Direction.UP
+    elif input_vector[1] > input_vector[4] + ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
+        return_val = Direction.DOWN
+    else:
+        return_val = Direction.NOOP
+    return return_val
 
 
 class HardcodedAi:
@@ -50,16 +56,11 @@ class HardcodedAi:
         :return: action[0] is up, action[1] is down"
         :rtype:
         """
-        if input_vector[1] < input_vector[4]:
-            return_val = Direction.UP
-        elif input_vector[1] > input_vector[4]:
-            return_val = Direction.DOWN
-        else:
-            return_val = Direction.NOOP
+        return_val = up_down_noop_logic(input_vector)
         return return_val
 
     def __str__(self):
-        return "HardcodedAi"
+        return "HCAI"
 
 
 class ScoreHardcodedAi:
@@ -85,11 +86,8 @@ class ScoreHardcodedAi:
         """
         return_val = Direction.NOOP
         if self.score_info["score1"] <= self.score_info["score2"]:
-            if input_vector[1] < input_vector[4]:
-                return_val = Direction.UP
-            elif input_vector[1] > input_vector[4]:
-                return_val = Direction.DOWN
+            return_val = up_down_noop_logic(input_vector)
         return return_val
 
     def __str__(self):
-        return "ScoreHardcodedAi"
+        return "SHCAI"

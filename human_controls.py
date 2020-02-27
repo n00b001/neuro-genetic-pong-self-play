@@ -57,7 +57,7 @@ class HumanPlayer1:
         return ret_val
 
     def __str__(self):
-        return "HumanPlayer1"
+        return "HP1"
 
 
 class HumanPlayer2:
@@ -75,4 +75,4 @@ class HumanPlayer2:
         return ret_val
 
     def __str__(self):
-        return "HumanPlayer2"
+        return "HP2"

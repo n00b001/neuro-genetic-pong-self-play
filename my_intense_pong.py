@@ -3,7 +3,6 @@ import math as maths
 import random
 
 from config import *
-from utils import Direction
 
 with contextlib.redirect_stdout(None):
     import pygame
@@ -23,11 +22,12 @@ class MyPong:
         self.score_font = None
         self.debug_font = None
         self.should_render = render
+        self.ball_speed_upper = 0.0
 
     def on_init(self):
         pygame.init()
         if self.should_render:
-            self.display_surf = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+            self.display_surf = pygame.display.set_mode((int(GAME_WIDTH), int(GAME_HEIGHT)))
         else:
             self.display_surf = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
         self.score_font = pygame.font.Font('font_file.ttf', 100)
@@ -56,9 +56,12 @@ class MyPong:
             else:
                 collision_angle = collision_angle - BALL_MIN_BOUNCE
 
+        # the 1.6 here has been tested - it is the fastest the ball can go before it goes through the paddles
+        # use 1.4 to be safe
+        ball_speed = min(float(BALL_SPEED + self.ball_speed_upper), BALL_SIZE[0] * 1.4)
         self.ball_velocity = [
-            maths.cos(float(collision_angle)) * float(BALL_SPEED),
-            maths.sin(float(collision_angle)) * float(BALL_SPEED)
+            maths.cos(float(collision_angle)) * ball_speed,
+            maths.sin(float(collision_angle)) * -ball_speed
         ]
 
     def move_paddle(self, paddle: pygame.Rect, control):
@@ -81,10 +84,25 @@ class MyPong:
         elif self.ball.bottom > GAME_HEIGHT:
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
 
+        collide = False
         if self.ball.colliderect(self.left_paddle):
             self.ball_paddle_redirect(self.left_paddle)
+            collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.ball_paddle_redirect(self.right_paddle)
+            collide = True
+        if collide:
+            # todo: this speeds up the ball
+            self.ball_speed_upper += 1
+
+            # todo
+            # This is to introduce a little randomness to reduce the chance of looping forever...
+            #   not sure if it's a good idea
+            #   the "4" her has been tested
+            # self.ball_velocity = [
+            #     self.ball_velocity[0] + ((random.random() - 0.5) * 4.0),
+            #     self.ball_velocity[1] + ((random.random() - 0.5) * 4.0)
+            # ]
 
         if self.ball.left < 0:
             self.score["score2"] += 1
@@ -93,6 +111,7 @@ class MyPong:
         if self.ball.left < 0 or self.ball.right > GAME_WIDTH:
             self.restart_ball()
             self.restart_paddles()
+            self.ball_speed_upper = 0.0
 
     def restart_ball(self):
         self.ball.centerx = GAME_WIDTH / 2.0
@@ -107,6 +126,7 @@ class MyPong:
         self._running = self.on_init()
         self.restart_ball()
         self.restart_paddles()
+        self.ball_speed_upper = 0.0
         self.score = {"score1": 0, "score2": 0}
 
     def render(self, left_class=None, right_class=None):

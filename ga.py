@@ -88,10 +88,8 @@ toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.att
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxBlend, alpha=CROSSOVER_BLEND_ALPHA)
-# toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=GAUSSIAN_MUTATION_MEAN, sigma=GAUSSIAN_MUTATION_SIGMA,
                  indpb=PROBABILITY_OF_MUTATING_A_SINGLE_GENE)
-# toolbox.register("select", tools.selBest, TOURN_SIZE)
 toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
 
 population = load_or_create_pop()

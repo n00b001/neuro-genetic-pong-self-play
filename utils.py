@@ -2,16 +2,8 @@ import datetime
 import os
 import pickle
 import random
-from enum import Enum
 
 from config import *
-from config import GAME_WIDTH, ALL_ACTIONS, GAME_HEIGHT
-
-
-class Direction(Enum):
-    UP = [1, 0]
-    DOWN = [0, 1]
-    NOOP = [0, 0]
 
 
 def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
@@ -24,6 +16,14 @@ def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
 
 def get_random_action(all_actions):
     return all_actions[np.random.choice(all_actions.shape[0], size=None, replace=False), :]
+
+
+def get_random_action2(all_actions):
+    return all_actions[random.randint(0, len(all_actions) - 1)]
+
+
+def get_random_action3():
+    return random.choice(list(Direction))
 
 
 def save_checkpoint(_population, hall_of_fame):
@@ -68,8 +68,8 @@ def inference(ball_location, last_ball_location, me, enemy, model):
 
 
 def get_actions(ball_location, last_ball_location, left_location, left_model, right_location, right_model):
-    left_action = get_random_action(ALL_ACTIONS)
-    right_action = get_random_action(ALL_ACTIONS)
+    left_action = get_random_action3()
+    right_action = get_random_action3()
     if last_ball_location is None:
         last_ball_location = ball_location
     if ball_location is not None:

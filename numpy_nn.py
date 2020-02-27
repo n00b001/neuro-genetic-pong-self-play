@@ -4,17 +4,16 @@ import numpy as np
 import scoop
 from scipy.stats import truncnorm
 
-from config import NETWORK_SHAPE, BIAS
-from utils import Direction
+from config import *
 
 
-@np.vectorize
+# @np.vectorize
 # alternative activation function
 def relu(x):
     return np.maximum(0.0, x)
 
 
-@np.vectorize
+# @np.vectorize
 # derivation of relu
 def relu_derivation(x):
     if x <= 0:
@@ -41,10 +40,12 @@ class NeuralNetwork:
                  nodes: list,
                  learning_rate=0.1,
                  bias=None,
-                 weights=None
+                 weights=None,
+                 fitness=0.0
                  ):
 
         self.nodes = nodes
+        self.fitness = fitness
         self.learning_rate = learning_rate
         self.bias = 1 if bias else 0
         self.last_weight = -1 if bias else None
@@ -128,20 +129,16 @@ class NeuralNetwork:
 
         for i, w in enumerate(self.weights[:]):
             self.list_of_transitional_arrays[i + 1][:self.last_weight] = np.dot(w, self.list_of_transitional_arrays[i])
-            self.list_of_transitional_arrays[i + 1][:self.last_weight] = \
-                activation_function(self.list_of_transitional_arrays[i + 1][:self.last_weight])
+            self.list_of_transitional_arrays[i + 1][:self.last_weight] = activation_function(
+                self.list_of_transitional_arrays[i + 1][:self.last_weight]
+            )
 
         inx = np.argmax(np.squeeze(self.list_of_transitional_arrays[-1][:self.last_weight]))
-        if inx == 0:
-            ret_val = Direction.UP
-        elif inx == 1:
-            ret_val = Direction.DOWN
-        else:
-            raise Exception("Shouldn't happen")
+        ret_val = Direction(inx)
         return ret_val
 
     def __str__(self):
-        return "NeuralNetwork"
+        return "NN:{}".format(self.fitness)
 
 
 def main():
@@ -183,10 +180,15 @@ if __name__ == '__main__':
 
 
 def create_model_from_genes(individual):
+    if individual.fitness.valid:
+        fitness = individual.fitness.values[0]
+    else:
+        fitness = 0.0
     simple_network = NeuralNetwork(
         nodes=NETWORK_SHAPE,
-        weights=individual,
-        bias=BIAS
+        weights=list(individual),
+        bias=BIAS,
+        fitness=fitness
     )
 
     return simple_network
@@ -201,6 +203,6 @@ def create_model_from_hall_of_fame(hall_of_fame):
         for hall_of_famer in hall_of_fame_items:
             if hall_of_famer.fitness.valid:
                 right_score_multiplier = hall_of_famer.fitness.values[0]
-                left_model = create_model_from_genes(list(hall_of_famer))
+                left_model = create_model_from_genes(hall_of_famer)
                 break
     return left_model, right_score_multiplier
