@@ -7,9 +7,9 @@ from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GA
 
 
 def calculate_reward(score_multiplier, my_score, enemy_score):
-    diff = my_score - enemy_score
+    # diff = my_score - enemy_score
     bonus_points = my_score * score_multiplier
-    reward = diff + (bonus_points / BONUS_SCALAR)
+    reward = my_score + (max(my_score, 0) * (bonus_points / BONUS_SCALAR))
     return reward
 
 

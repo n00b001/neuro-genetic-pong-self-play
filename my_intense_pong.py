@@ -40,12 +40,13 @@ class MyPong:
         return True
 
     def randomise_ball_vel(self):
+        # this offset just means the ball won't hit the paddle on start - it forces the paddle to move
+        offset = 0.7
         # https://stackoverflow.com/questions/6824681/get-a-random-boolean-in-python
-        random_offset = random.random() - 0.5
         if bool(random.getrandbits(1)):
-            ball_direction = 0.0 + random_offset
+            ball_direction = 0.0 + offset
         else:
-            ball_direction = maths.pi + random_offset
+            ball_direction = maths.pi + offset
         self.ball_velocity = [
             maths.cos(float(ball_direction)) * float(BALL_SPEED),
             maths.sin(float(ball_direction)) * float(BALL_SPEED)
@@ -97,12 +98,14 @@ class MyPong:
         if self.ball.colliderect(self.left_paddle):
             self.ball_paddle_redirect(self.left_paddle)
             self.score["score1"] += PADDLE_HIT_SCORE
+            self.score["score2"] -= PADDLE_HIT_SCORE
             self.ball.left = self.left_paddle.right
             self.timeout_counter = 0.0
             collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.ball_paddle_redirect(self.right_paddle)
             self.score["score2"] += PADDLE_HIT_SCORE
+            self.score["score1"] -= PADDLE_HIT_SCORE
             self.ball.right = self.right_paddle.left
             self.timeout_counter = 0.0
             collide = True
@@ -121,8 +124,10 @@ class MyPong:
 
         if self.ball.left < 0:
             self.score["score2"] += POINT_SCORE
+            self.score["score1"] -= POINT_SCORE
         elif self.ball.right > GAME_WIDTH:
             self.score["score1"] += POINT_SCORE
+            self.score["score2"] -= POINT_SCORE
         if self.ball.left < 0 or self.ball.right > GAME_WIDTH:
             self.restart_ball()
             self.restart_paddles()
@@ -134,8 +139,8 @@ class MyPong:
         self.randomise_ball_vel()
 
     def restart_paddles(self):
-        self.left_paddle.centery = random.randrange(0, GAME_HEIGHT)
-        self.right_paddle.centery = random.randrange(0, GAME_HEIGHT)
+        self.left_paddle.centery = GAME_HEIGHT / 2.0
+        self.right_paddle.centery = GAME_HEIGHT / 2.0
 
     def reset(self):
         self._running = self.on_init()
@@ -198,7 +203,7 @@ class MyPong:
 
     def step(self, control):
         self.timeout_counter += 1.0
-        self.score = self.decrement_score(SCORE_DECAY)
+        self.score = self.multiply_score(SCORE_DECAY)
         self.left_paddle = self.move_paddle(self.left_paddle, control["player1"])
         self.right_paddle = self.move_paddle(self.right_paddle, control["player2"])
 
@@ -228,5 +233,5 @@ class MyPong:
         debug_string = debug_string[:-1]
         return debug_string
 
-    def decrement_score(self, number):
-        return {k: v - number for k, v in self.score.items()}
+    def multiply_score(self, number):
+        return {k: v * number for k, v in self.score.items()}
