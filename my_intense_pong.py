@@ -2,7 +2,10 @@ import contextlib
 import math as maths
 import random
 
-from config import *
+from consts import Direction, PADDLE_HIT_SCORE, POINT_SCORE, SCORE_DECAY, BALL_SPEED_UPPER, BACKGROUND_COLOUR, \
+    GAME_HEIGHT, GAME_WIDTH, RIGHT_GUY_COLOUR, LEFT_GUY_COLOUR, BALL_COLOUR, SCORE_COLOUR, STARTING_POSITION_Y, \
+    PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_SPEED, BALL_SIZE, BALL_SPEED, BALL_MIN_BOUNCE, LEFT_GUY_X, RIGHT_GUY_X, \
+    TIMEOUT_THRESH
 
 with contextlib.redirect_stdout(None):
     import pygame
@@ -23,6 +26,7 @@ class MyPong:
         self.debug_font = None
         self.should_render = render
         self.ball_speed_upper = 0.0
+        self.timeout_counter = 0.0
 
     def on_init(self):
         pygame.init()
@@ -83,20 +87,28 @@ class MyPong:
         collide = False
         if self.ball.top < 0:
             self.ball_velocity[1] = abs(self.ball_velocity[1])
+            self.ball.top = 0
             collide = True
         elif self.ball.bottom > GAME_HEIGHT:
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
+            self.ball.bottom = GAME_HEIGHT
             collide = True
 
         if self.ball.colliderect(self.left_paddle):
             self.ball_paddle_redirect(self.left_paddle)
+            self.score["score1"] += PADDLE_HIT_SCORE
+            self.ball.left = self.left_paddle.right
+            self.timeout_counter = 0.0
             collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.ball_paddle_redirect(self.right_paddle)
+            self.score["score2"] += PADDLE_HIT_SCORE
+            self.ball.right = self.right_paddle.left
+            self.timeout_counter = 0.0
             collide = True
         if collide:
             # todo: this speeds up the ball
-            self.ball_speed_upper += 1
+            self.ball_speed_upper += BALL_SPEED_UPPER
 
             # todo
             # This is to introduce a little randomness to reduce the chance of looping forever...
@@ -108,9 +120,9 @@ class MyPong:
             # ]
 
         if self.ball.left < 0:
-            self.score["score2"] += 1
+            self.score["score2"] += POINT_SCORE
         elif self.ball.right > GAME_WIDTH:
-            self.score["score1"] += 1
+            self.score["score1"] += POINT_SCORE
         if self.ball.left < 0 or self.ball.right > GAME_WIDTH:
             self.restart_ball()
             self.restart_paddles()
@@ -130,6 +142,7 @@ class MyPong:
         self.restart_ball()
         self.restart_paddles()
         self.ball_speed_upper = 0.0
+        self.timeout_counter = 0.0
         self.score = {"score1": 0, "score2": 0}
 
     def render(self, left_class=None, right_class=None):
@@ -172,7 +185,7 @@ class MyPong:
         self.display_surf.blit(text, rectangle)
 
     def get_score_string(self):
-        score_string = "{}:{}".format(self.score["score1"], self.score["score2"])
+        score_string = "{:.2f}:{:.2f}".format(self.score["score1"], self.score["score2"])
         return score_string
 
     def on_cleanup(self):
@@ -184,6 +197,8 @@ class MyPong:
     """
 
     def step(self, control):
+        self.timeout_counter += 1.0
+        self.score = self.decrement_score(SCORE_DECAY)
         self.left_paddle = self.move_paddle(self.left_paddle, control["player1"])
         self.right_paddle = self.move_paddle(self.right_paddle, control["player2"])
 
@@ -199,7 +214,10 @@ class MyPong:
         ]
 
         pygame.event.get()  # we must do this to stop it freezing on windows :(
-        return observation, 0, False, self.score
+
+        if self.timeout_counter > TIMEOUT_THRESH:
+            self._running = False
+        return observation, 0, self._running, self.score
 
     def get_debug_string(self, left_class, right_class):
         debug_string = ""
@@ -209,3 +227,6 @@ class MyPong:
             debug_string += "{}\n".format(right_class)
         debug_string = debug_string[:-1]
         return debug_string
+
+    def decrement_score(self, number):
+        return {k: v - number for k, v in self.score.items()}

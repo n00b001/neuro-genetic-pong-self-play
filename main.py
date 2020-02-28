@@ -1,10 +1,13 @@
 import time
 
 import numpy as np
+import scoop
 from deap import algorithms
 from deap import tools
 
 import ga
+from config import *
+from consts import *
 from dumb_ais import ScoreHardcodedAi, RandomHardcodedAi
 from ga import toolbox, hall_of_fame
 from my_intense_pong import MyPong
@@ -44,17 +47,14 @@ def evaluate(individual=None, render=RENDER):
 
 
 def perform_episode(env, left_model, right_model, render, score_multiplier):
-    last_score = None
     actions = {
         "player1": Direction.NOOP,
         "player2": Direction.NOOP
     }
-    timeout_counter = 0.0
-    total_frames = 0.0
     last_ball_location = None
     st = time.time()
     while True:
-        observation, _, is_done, score_info = env.step(actions)
+        observation, _, is_running, score_info = env.step(actions)
         if type(left_model) == ScoreHardcodedAi:
             left_model.set_score(score_info)
         if type(right_model) == ScoreHardcodedAi:
@@ -68,25 +68,17 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         actions["player1"] = left_action
         actions["player2"] = right_action
 
-        timeout_counter, total_frames = calculate_timeout_and_frames(
-            last_score, score_info, timeout_counter, total_frames
-        )
-        last_score = score_info
-
         if render:
             st = render_game(env, st, left_model, right_model)
 
         if score_info["score1"] >= WIN_SCORE or score_info["score2"] >= WIN_SCORE:
             break
-        if is_done:
-            break
-        if timeout_counter > TIMEOUT_THRESH:
+        if not is_running:
             break
     env.reset()
     if score_info["score1"] == score_info["score2"]:
         return 0
-    total_frames += timeout_counter
-    right_reward = calculate_reward(score_multiplier, total_frames, score_info["score2"], score_info["score1"])
+    right_reward = calculate_reward(score_multiplier, score_info["score2"], score_info["score1"])
     return right_reward
 
 
@@ -103,14 +95,13 @@ def render_game(env, st, left_class=None, right_class=None):
     return st
 
 
-def calculate_timeout_and_frames(last_score, score_info, timeout_counter, total_frames):
+def calculate_timeout_and_frames(last_score, score_info, timeout_counter):
     if last_score is not None:
         if last_score == score_info:
             timeout_counter += 1.0
         else:
-            total_frames += timeout_counter
             timeout_counter = 0.0
-    return timeout_counter, total_frames
+    return timeout_counter
 
 
 def main():

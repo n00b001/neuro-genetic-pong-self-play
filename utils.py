@@ -3,14 +3,13 @@ import os
 import pickle
 import random
 
-from config import *
+from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GAME_WIDTH
 
 
-def calculate_reward(score_multiplier, total_time, my_score, enemy_score):
+def calculate_reward(score_multiplier, my_score, enemy_score):
     diff = my_score - enemy_score
-    scaled_time = total_time / TIME_SCALAR
     bonus_points = my_score * score_multiplier
-    reward = (diff / scaled_time)
+    reward = diff + (bonus_points / BONUS_SCALAR)
     return reward
 
 

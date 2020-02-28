@@ -8,6 +8,7 @@ from deap import base, tools, creator
 from scoop import futures
 
 from config import *
+from consts import GAUSSIAN_MUTATION_MEAN, HALL_OF_FAME_AMOUNT, TOURNAMENT_SIZE
 from utils import calculate_gene_size
 
 

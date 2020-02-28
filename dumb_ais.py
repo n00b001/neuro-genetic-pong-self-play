@@ -1,6 +1,6 @@
 import random
 
-from config import *
+from consts import Direction, GAME_HEIGHT, PADDLE_HEIGHT
 from utils import get_random_action3
 
 
@@ -28,7 +28,7 @@ class RandomHardcodedAi:
         return get_random_action3()
 
     def __str__(self):
-        return "RHCAI:{}".format(self.random_thresh)
+        return "RHCAI:{:.2f}".format(self.random_thresh)
 
 
 def up_down_noop_logic(input_vector):

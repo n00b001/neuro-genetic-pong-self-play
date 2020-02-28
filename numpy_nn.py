@@ -4,11 +4,11 @@ import numpy as np
 import scoop
 from scipy.stats import truncnorm
 
-from config import *
-
-
 # @np.vectorize
 # alternative activation function
+from consts import Direction, NETWORK_SHAPE, BIAS
+
+
 def relu(x):
     return np.maximum(0.0, x)
 
@@ -138,7 +138,7 @@ class NeuralNetwork:
         return ret_val
 
     def __str__(self):
-        return "NN:{}".format(self.fitness)
+        return "NN:{:.2f}".format(self.fitness)
 
 
 def main():

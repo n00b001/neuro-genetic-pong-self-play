@@ -1,6 +1,6 @@
 from pynput import keyboard
 
-from utils import Direction
+from consts import Direction
 
 button_w = 0
 button_s = 1
