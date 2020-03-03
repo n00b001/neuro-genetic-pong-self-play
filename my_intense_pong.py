@@ -104,14 +104,12 @@ class MyPong:
             self.ball_paddle_redirect(self.left_paddle)
             self.score["score1"] += PADDLE_HIT_SCORE
             self.score["score2"] -= PADDLE_HIT_SCORE
-            self.timeout_counter = 0.0
             collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.ball_pos[0] = self.right_paddle.left - (BALL_SIZE[0] / 2.0)
             self.ball_paddle_redirect(self.right_paddle)
             self.score["score2"] += PADDLE_HIT_SCORE
             self.score["score1"] -= PADDLE_HIT_SCORE
-            self.timeout_counter = 0.0
             collide = True
         if collide:
             # todo: this speeds up the ball

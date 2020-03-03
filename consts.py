@@ -12,7 +12,7 @@ class Direction(Enum):
 
 FPS = 60
 
-TIMEOUT_THRESH = 1_500
+TIMEOUT_THRESH = 5_000
 
 # I want some depth to try and have higher abstract thoughts
 NETWORK_SHAPE = [
