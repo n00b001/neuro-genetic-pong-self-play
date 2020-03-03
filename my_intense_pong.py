@@ -19,7 +19,11 @@ class MyPong:
         self.ball = pygame.Rect((GAME_HEIGHT / 2.0, GAME_WIDTH / 2.0), BALL_SIZE)
         self.system_clock = pygame.time.Clock()
         self.ball_velocity = [0.0, 0.0]
-        self.ball_pos = [0.0, 0.0]
+        self.ball_centre_pos = [0.0, 0.0]
+        self.left_paddle_center = [float(LEFT_GUY_X), float(STARTING_POSITION_Y)]
+        self.left_paddle_velocity = [0.0, 0.0]
+        self.right_paddle_center = [float(RIGHT_GUY_X), float(STARTING_POSITION_Y)]
+        self.right_paddle_velocity = [0.0, 0.0]
         self.score = {"score1": 0.0, "score2": 0.0}
         self.score_font = None
         self.debug_font = None
@@ -58,10 +62,10 @@ class MyPong:
 
         self.ball_velocity = rotate(ball_direction, [BALL_SPEED, 0.0])
 
-    def ball_paddle_redirect(self, paddle: pygame.Rect):
+    def ball_paddle_redirect(self, location):
         collision_vet = [
-            self.ball.center[0] - paddle.center[0],
-            self.ball.center[1] - paddle.center[1]
+            self.ball_centre_pos[0] - location[0],
+            self.ball_centre_pos[1] - location[1]
         ]
         collision_angle = maths.atan2(collision_vet[1], collision_vet[0])
 
@@ -76,45 +80,51 @@ class MyPong:
         ball_speed = min(float(BALL_SPEED + self.ball_speed_upper), BALL_SIZE[0] * 1.4)
         self.ball_velocity = rotate(collision_angle, [ball_speed, 0.0])
 
-    def move_paddle(self, paddle: pygame.Rect, control):
+    def get_velocity(self, control):
+        return_val = [0.0, 0.0]
         if control == Direction.UP:
-            paddle = paddle.move(0, -PADDLE_SPEED)
+            return_val = [0, -PADDLE_SPEED]
         elif control == Direction.DOWN:
-            paddle = paddle.move(0, PADDLE_SPEED)
-        return paddle
+            return_val = [0, PADDLE_SPEED]
+        return return_val
 
-    def limit_paddles(self, paddle: pygame.Rect):
-        if paddle.top < 0:
-            paddle.top = 0
-        elif paddle.bottom > GAME_HEIGHT:
-            paddle.bottom = GAME_HEIGHT
-        return paddle
+    def limit_paddles(self, location):
+        top = location[1] - (PADDLE_HEIGHT / 2.0)
+        bottom = location[1] + (PADDLE_HEIGHT / 2.0)
+        if top < 0:
+            location[1] = (PADDLE_HEIGHT / 2.0)
+        elif bottom > GAME_HEIGHT:
+            location[1] = GAME_HEIGHT - (PADDLE_HEIGHT / 2.0)
+        return location
 
-    def bounce_ball(self):
+    def collide_checks(self):
         collide = False
-        if self.ball.top < 0:
+        if self.ball_centre_pos[1] < BALL_SIZE[1] / 2.0:
             self.ball_velocity[1] = abs(self.ball_velocity[1])
-            self.ball.top = 0
+            self.ball_centre_pos[1] = (BALL_SIZE[1] / 2.0)
             collide = True
-        elif self.ball.bottom > GAME_HEIGHT:
+        elif self.ball_centre_pos[1] > GAME_HEIGHT - (BALL_SIZE[1] / 2.0):
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
-            self.ball.bottom = GAME_HEIGHT
+            self.ball_centre_pos[1] = GAME_HEIGHT - (BALL_SIZE[1] / 2.0)
             collide = True
-
         if self.ball.colliderect(self.left_paddle):
             self.left_frames_since_last_hit = 0.0
-            self.ball_pos[0] = self.left_paddle.right + (BALL_SIZE[0] / 2.0)
-            self.ball_paddle_redirect(self.left_paddle)
+            self.ball_centre_pos[0] = self.left_paddle_center[0] + (BALL_SIZE[0] / 2.0) + (PADDLE_WIDTH / 2.0)
+            self.ball_paddle_redirect(self.left_paddle_center)
             self.score["score1"] += PADDLE_HIT_SCORE
             self.score["score2"] -= PADDLE_HIT_SCORE
             collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.right_frames_since_last_hit = 0.0
-            self.ball_pos[0] = self.right_paddle.left - (BALL_SIZE[0] / 2.0)
-            self.ball_paddle_redirect(self.right_paddle)
+            self.ball_centre_pos[0] = self.right_paddle_center[0] - (BALL_SIZE[0] / 2.0) - (PADDLE_WIDTH / 2.0)
+            self.ball_paddle_redirect(self.right_paddle_center)
             self.score["score2"] += PADDLE_HIT_SCORE
             self.score["score1"] -= PADDLE_HIT_SCORE
             collide = True
+
+        self.left_paddle_center = self.limit_paddles(self.left_paddle_center)
+        self.right_paddle_center = self.limit_paddles(self.right_paddle_center)
+
         if collide:
             # todo: this speeds up the ball
             self.ball_speed_upper += BALL_SPEED_UPPER
@@ -128,25 +138,29 @@ class MyPong:
             #     self.ball_velocity[1] + ((random.random() - 0.5) * 4.0)
             # ]
 
-        if self.ball.left < 0:
+    def score_logic(self):
+        scored = False
+        if self.ball_centre_pos[0] < (BALL_SIZE[0] / 2.0):
+            scored = True
             self.score["score2"] += POINT_SCORE
             self.score["score1"] -= POINT_SCORE
-        elif self.ball.right > GAME_WIDTH:
+        elif self.ball_centre_pos[0] > GAME_WIDTH - (BALL_SIZE[0] / 2.0):
+            scored = True
             self.score["score1"] += POINT_SCORE
             self.score["score2"] -= POINT_SCORE
-        if self.ball.left < 0 or self.ball.right > GAME_WIDTH:
+        if scored:
             self.restart_ball()
             self.restart_paddles()
             self.ball_speed_upper = 0.0
 
     def restart_ball(self):
-        self.ball_pos[0] = GAME_WIDTH / 2.0
-        self.ball_pos[1] = GAME_HEIGHT / 2.0
+        self.ball_centre_pos[0] = GAME_WIDTH / 2.0
+        self.ball_centre_pos[1] = GAME_HEIGHT / 2.0
         self.randomise_ball_vel()
 
     def restart_paddles(self):
-        self.left_paddle.centery = GAME_HEIGHT / 2.0
-        self.right_paddle.centery = GAME_HEIGHT / 2.0
+        self.left_paddle_center[1] = GAME_HEIGHT / 2.0
+        self.right_paddle_center[1] = GAME_HEIGHT / 2.0
 
     def reset(self):
         self._running = self.on_init()
@@ -214,19 +228,21 @@ class MyPong:
         self.left_frames_since_last_hit += 1.0
         self.right_frames_since_last_hit += 1.0
         self.score = self.multiply_score(SCORE_DECAY)
-        self.left_paddle = self.move_paddle(self.left_paddle, control["player1"])
-        self.right_paddle = self.move_paddle(self.right_paddle, control["player2"])
+        self.left_paddle_velocity = self.get_velocity(control["player1"])
+        self.right_paddle_velocity = self.get_velocity(control["player2"])
 
-        self.left_paddle = self.limit_paddles(self.left_paddle)
-        self.right_paddle = self.limit_paddles(self.right_paddle)
+        self.update()
+        self.collide_checks()
+        self.score_logic()
 
-        self.update_ball_pos()
-        self.bounce_ball()
+        self.left_paddle.center = self.left_paddle_center
+        self.right_paddle.center = self.right_paddle_center
+        self.ball.center = self.ball_centre_pos
 
         observation = [
-            [self.ball.centery, self.ball.centerx],
-            [self.left_paddle.centery, self.left_paddle.centerx],
-            [self.right_paddle.centery, self.right_paddle.centerx]
+            [self.ball_centre_pos[1], self.ball_centre_pos[0]],
+            [self.left_paddle_center[1], self.left_paddle_center[0]],
+            [self.right_paddle_center[1], self.right_paddle_center[0]]
         ]
 
         pygame.event.get()  # we must do this to stop it freezing on windows :(
@@ -239,12 +255,24 @@ class MyPong:
             self._running = False
         return observation, 0, self._running, self.score
 
-    def update_ball_pos(self):
-        self.ball_pos = [
-            self.ball_pos[i] + (self.ball_velocity[i] * TIME_STEP)
+    def update(self):
+        ball_pos = [
+            self.ball_centre_pos[i] + (self.ball_velocity[i] * TIME_STEP)
             for i in range(len(self.ball_velocity))
         ]
-        self.ball.center = self.ball_pos
+        self.ball_centre_pos = ball_pos
+
+        left_paddle_pos = [
+            self.left_paddle_center[i] + (self.left_paddle_velocity[i] * TIME_STEP)
+            for i in range(len(self.left_paddle_velocity))
+        ]
+        self.left_paddle_center = left_paddle_pos
+
+        right_paddle_pos = [
+            self.right_paddle_center[i] + (self.right_paddle_velocity[i] * TIME_STEP)
+            for i in range(len(self.right_paddle_velocity))
+        ]
+        self.right_paddle_center = right_paddle_pos
 
     def get_debug_string(self, left_class, right_class):
         debug_string = ""
