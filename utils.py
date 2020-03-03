@@ -1,15 +1,19 @@
 import datetime
+import math
 import os
 import pickle
 import random
 
-from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GAME_WIDTH
+from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GAME_WIDTH, WIN_SCORE
 
 
 def calculate_reward(score_multiplier, my_score, enemy_score):
     # diff = my_score - enemy_score
-    bonus_points = my_score * score_multiplier
-    reward = my_score + (max(my_score, 0) * (bonus_points / BONUS_SCALAR))
+
+    # this means we get a big positive bonus if we win (10, -10)
+    # this means we get a bonus of 0 if we just get bodied (-10, 10)
+    bonus_points = ((my_score - enemy_score) + (WIN_SCORE * 2.0)) * score_multiplier
+    reward = my_score + (bonus_points / BONUS_SCALAR)
     return reward
 
 
@@ -59,8 +63,7 @@ def inference(ball_location, last_ball_location, me, enemy, model):
     predictions = model.run(
         [
             normalised_ball_location_x, normalised_ball_location_y,
-            normalised_last_ball_location_x,
-            normalised_last_ball_location_y,
+            normalised_last_ball_location_x, normalised_last_ball_location_y,
             normalised_me, normalised_enemy
         ])
     return predictions
@@ -83,3 +86,17 @@ def get_actions(ball_location, last_ball_location, left_location, left_model, ri
         left_action = Direction.NOOP
         right_action = Direction.NOOP
     return left_action, right_action
+
+
+def rotate(angle, point, origin=(0, 0)):
+    """
+    Rotate a point counterclockwise by a given angle around a given origin.
+
+    The angle should be given in radians.
+    """
+    ox, oy = origin
+    px, py = point
+
+    qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+    qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+    return [qx, qy]

@@ -12,11 +12,11 @@ class Direction(Enum):
 
 FPS = 60
 
-TIMEOUT_THRESH = 1_000
+TIMEOUT_THRESH = 1_500
 
 # I want some depth to try and have higher abstract thoughts
 NETWORK_SHAPE = [
-    6, 5, 4, 3, len(Direction)
+    6, 4, len(Direction)
 ]
 BIAS = True
 
@@ -32,7 +32,7 @@ RENDER = False
 WIN_SCORE = 10
 PADDLE_HIT_SCORE = 0.1
 POINT_SCORE = 1.0
-BONUS_SCALAR = 2.0
+BONUS_SCALAR = 100.0
 SCORE_DECAY = 0.99995
 
 BALL_SPEED_UPPER = 1.0
@@ -58,3 +58,5 @@ BALL_MIN_BOUNCE = 0.1
 
 LEFT_GUY_X = PADDLE_EDGE_DISTANCE
 RIGHT_GUY_X = GAME_WIDTH - PADDLE_EDGE_DISTANCE - PADDLE_WIDTH
+
+TIME_STEP = 1.0

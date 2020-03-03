@@ -2,10 +2,8 @@ import contextlib
 import math as maths
 import random
 
-from consts import Direction, PADDLE_HIT_SCORE, POINT_SCORE, SCORE_DECAY, BALL_SPEED_UPPER, BACKGROUND_COLOUR, \
-    GAME_HEIGHT, GAME_WIDTH, RIGHT_GUY_COLOUR, LEFT_GUY_COLOUR, BALL_COLOUR, SCORE_COLOUR, STARTING_POSITION_Y, \
-    PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_SPEED, BALL_SIZE, BALL_SPEED, BALL_MIN_BOUNCE, LEFT_GUY_X, RIGHT_GUY_X, \
-    TIMEOUT_THRESH
+from consts import *
+from utils import rotate
 
 with contextlib.redirect_stdout(None):
     import pygame
@@ -21,6 +19,7 @@ class MyPong:
         self.ball = pygame.Rect((GAME_HEIGHT / 2.0, GAME_WIDTH / 2.0), BALL_SIZE)
         self.system_clock = pygame.time.Clock()
         self.ball_velocity = [0.0, 0.0]
+        self.ball_pos = [0.0, 0.0]
         self.score = {"score1": 0.0, "score2": 0.0}
         self.score_font = None
         self.debug_font = None
@@ -36,24 +35,32 @@ class MyPong:
             self.display_surf = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
         self.score_font = pygame.font.Font('font_file.ttf', 100)
         self.debug_font = pygame.font.Font('font_file.ttf', 20)
-        self.randomise_ball_vel()
         return True
 
     def randomise_ball_vel(self):
         # this offset just means the ball won't hit the paddle on start - it forces the paddle to move
-        offset = 0.7
+
+        # 0.79 hits bottom of the screen
+        # -0.79 hits top of the screen
+        # 0.09 misses the bottom of the paddle
+        # -0.09 misses the top of the paddle
+        offset = random.uniform(0.09, 0.79)
         # https://stackoverflow.com/questions/6824681/get-a-random-boolean-in-python
+        if bool(random.getrandbits(1)):
+            # above of below
+            offset = -offset
         if bool(random.getrandbits(1)):
             ball_direction = 0.0 + offset
         else:
             ball_direction = maths.pi + offset
-        self.ball_velocity = [
-            maths.cos(float(ball_direction)) * float(BALL_SPEED),
-            maths.sin(float(ball_direction)) * float(BALL_SPEED)
-        ]
+
+        self.ball_velocity = rotate(ball_direction, [BALL_SPEED, 0.0])
 
     def ball_paddle_redirect(self, paddle: pygame.Rect):
-        collision_vet = [self.ball.center[0] - paddle.center[0], self.ball.center[1] - paddle.center[1]]
+        collision_vet = [
+            self.ball.center[0] - paddle.center[0],
+            self.ball.center[1] - paddle.center[1]
+        ]
         collision_angle = maths.atan2(collision_vet[1], collision_vet[0])
 
         if abs((maths.pi / 2.0) - abs(collision_angle)) < BALL_MIN_BOUNCE:
@@ -65,10 +72,7 @@ class MyPong:
         # the 1.6 here has been tested - it is the fastest the ball can go before it goes through the paddles
         # use 1.4 to be safe
         ball_speed = min(float(BALL_SPEED + self.ball_speed_upper), BALL_SIZE[0] * 1.4)
-        self.ball_velocity = [
-            maths.cos(float(collision_angle)) * ball_speed,
-            maths.sin(float(collision_angle)) * -ball_speed
-        ]
+        self.ball_velocity = rotate(collision_angle, [ball_speed, 0.0])
 
     def move_paddle(self, paddle: pygame.Rect, control):
         if control == Direction.UP:
@@ -96,17 +100,17 @@ class MyPong:
             collide = True
 
         if self.ball.colliderect(self.left_paddle):
+            self.ball_pos[0] = self.left_paddle.right + (BALL_SIZE[0] / 2.0)
             self.ball_paddle_redirect(self.left_paddle)
             self.score["score1"] += PADDLE_HIT_SCORE
             self.score["score2"] -= PADDLE_HIT_SCORE
-            self.ball.left = self.left_paddle.right
             self.timeout_counter = 0.0
             collide = True
         elif self.ball.colliderect(self.right_paddle):
+            self.ball_pos[0] = self.right_paddle.left - (BALL_SIZE[0] / 2.0)
             self.ball_paddle_redirect(self.right_paddle)
             self.score["score2"] += PADDLE_HIT_SCORE
             self.score["score1"] -= PADDLE_HIT_SCORE
-            self.ball.right = self.right_paddle.left
             self.timeout_counter = 0.0
             collide = True
         if collide:
@@ -134,8 +138,8 @@ class MyPong:
             self.ball_speed_upper = 0.0
 
     def restart_ball(self):
-        self.ball.centerx = GAME_WIDTH / 2.0
-        self.ball.centery = GAME_HEIGHT / 2.0
+        self.ball_pos[0] = GAME_WIDTH / 2.0
+        self.ball_pos[1] = GAME_HEIGHT / 2.0
         self.randomise_ball_vel()
 
     def restart_paddles(self):
@@ -209,7 +213,8 @@ class MyPong:
 
         self.left_paddle = self.limit_paddles(self.left_paddle)
         self.right_paddle = self.limit_paddles(self.right_paddle)
-        self.ball = self.ball.move(self.ball_velocity)
+
+        self.update_ball_pos()
         self.bounce_ball()
 
         observation = [
@@ -223,6 +228,13 @@ class MyPong:
         if self.timeout_counter > TIMEOUT_THRESH:
             self._running = False
         return observation, 0, self._running, self.score
+
+    def update_ball_pos(self):
+        self.ball_pos = [
+            self.ball_pos[i] + (self.ball_velocity[i] * TIME_STEP)
+            for i in range(len(self.ball_velocity))
+        ]
+        self.ball.center = self.ball_pos
 
     def get_debug_string(self, left_class, right_class):
         debug_string = ""
