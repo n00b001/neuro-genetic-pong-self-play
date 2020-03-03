@@ -17,7 +17,7 @@ def main():
 
 def run_against_human(individual=None):
     left_model = RandomHardcodedAi(1)
-    right_model = RandomHardcodedAi(0.5)
+    right_model = RandomHardcodedAi(0.0)
 
     if individual is not None:
         print("Loading enemy from genes...")
