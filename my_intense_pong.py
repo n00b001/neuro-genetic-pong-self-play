@@ -3,7 +3,7 @@ import math as maths
 import random
 
 from consts import *
-from utils import rotate
+from utils import rotate, sigmoid
 
 with contextlib.redirect_stdout(None):
     import pygame
@@ -20,6 +20,8 @@ class MyPong:
         self.system_clock = pygame.time.Clock()
         self.ball_velocity = [0.0, 0.0]
         self.ball_centre_pos = [0.0, 0.0]
+        self.ball_centre_pos_previous = [0.0, 0.0]
+        self.ball_centre_pos_previous_previous = [0.0, 0.0]
         self.left_paddle_center = [float(LEFT_GUY_X), float(STARTING_POSITION_Y)]
         self.left_paddle_velocity = [0.0, 0.0]
         self.right_paddle_center = [float(RIGHT_GUY_X), float(STARTING_POSITION_Y)]
@@ -32,6 +34,7 @@ class MyPong:
         self.total_frames = 0.0
         self.left_frames_since_last_hit = 0.0
         self.right_frames_since_last_hit = 0.0
+        self.spin = 0.0
 
     def on_init(self):
         pygame.init()
@@ -100,10 +103,12 @@ class MyPong:
     def collide_checks(self):
         collide = False
         if self.ball_centre_pos[1] < BALL_SIZE[1] / 2.0:
+            self.spin *= 0.5
             self.ball_velocity[1] = abs(self.ball_velocity[1])
             self.ball_centre_pos[1] = (BALL_SIZE[1] / 2.0)
             collide = True
         elif self.ball_centre_pos[1] > GAME_HEIGHT - (BALL_SIZE[1] / 2.0):
+            self.spin *= 0.5
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
             self.ball_centre_pos[1] = GAME_HEIGHT - (BALL_SIZE[1] / 2.0)
             collide = True
@@ -111,6 +116,8 @@ class MyPong:
             self.left_frames_since_last_hit = 0.0
             self.ball_centre_pos[0] = self.left_paddle_center[0] + (BALL_SIZE[0] / 2.0) + (PADDLE_WIDTH / 2.0)
             self.ball_paddle_redirect(self.left_paddle_center)
+            self.spin = self.calculate_spin(self.left_paddle_velocity[1])
+            # self.ball_velocity[1] -
             self.score["score1"] += PADDLE_HIT_SCORE
             self.score["score2"] -= PADDLE_HIT_SCORE
             collide = True
@@ -118,6 +125,7 @@ class MyPong:
             self.right_frames_since_last_hit = 0.0
             self.ball_centre_pos[0] = self.right_paddle_center[0] - (BALL_SIZE[0] / 2.0) - (PADDLE_WIDTH / 2.0)
             self.ball_paddle_redirect(self.right_paddle_center)
+            self.spin = self.calculate_spin(self.right_paddle_velocity[1])
             self.score["score2"] += PADDLE_HIT_SCORE
             self.score["score1"] -= PADDLE_HIT_SCORE
             collide = True
@@ -138,13 +146,22 @@ class MyPong:
             #     self.ball_velocity[1] + ((random.random() - 0.5) * 4.0)
             # ]
 
+    def calculate_spin(self, vel):
+        spin = (sigmoid(vel) - 0.5) * (maths.pi / 72.0)
+        thresh = 0.006
+        if spin > thresh:
+            spin = thresh
+        elif spin < -thresh:
+            spin = -thresh
+        return spin
+
     def score_logic(self):
         scored = False
-        if self.ball_centre_pos[0] < (BALL_SIZE[0] / 2.0):
+        if self.ball_centre_pos[0] < 0.0:
             scored = True
             self.score["score2"] += POINT_SCORE
             self.score["score1"] -= POINT_SCORE
-        elif self.ball_centre_pos[0] > GAME_WIDTH - (BALL_SIZE[0] / 2.0):
+        elif self.ball_centre_pos[0] > GAME_WIDTH:
             scored = True
             self.score["score1"] += POINT_SCORE
             self.score["score2"] -= POINT_SCORE
@@ -154,6 +171,7 @@ class MyPong:
             self.ball_speed_upper = 0.0
 
     def restart_ball(self):
+        self.spin = 0.0
         self.ball_centre_pos[0] = GAME_WIDTH / 2.0
         self.ball_centre_pos[1] = GAME_HEIGHT / 2.0
         self.randomise_ball_vel()
@@ -199,6 +217,12 @@ class MyPong:
                 GAME_HEIGHT - 10,
                 self.debug_font
             )
+        self.draw_string(
+            "{}".format(self.spin),
+            GAME_WIDTH / 2.0,
+            GAME_HEIGHT / 2.0,
+            self.debug_font
+        )
 
         pygame.draw.rect(self.display_surf, LEFT_GUY_COLOUR, self.left_paddle)
         pygame.draw.rect(self.display_surf, RIGHT_GUY_COLOUR, self.right_paddle)
@@ -227,6 +251,7 @@ class MyPong:
         self.total_frames += 1.0
         self.left_frames_since_last_hit += 1.0
         self.right_frames_since_last_hit += 1.0
+        self.spin = self.spin * 0.999
         self.score = self.multiply_score(SCORE_DECAY)
         self.left_paddle_velocity = self.get_velocity(control["player1"])
         self.right_paddle_velocity = self.get_velocity(control["player2"])
@@ -241,9 +266,13 @@ class MyPong:
 
         observation = [
             [self.ball_centre_pos[1], self.ball_centre_pos[0]],
+            [self.ball_centre_pos_previous[1], self.ball_centre_pos_previous[0]],
+            [self.ball_centre_pos_previous_previous[1], self.ball_centre_pos_previous_previous[0]],
             [self.left_paddle_center[1], self.left_paddle_center[0]],
             [self.right_paddle_center[1], self.right_paddle_center[0]]
         ]
+        self.ball_centre_pos_previous = self.ball_centre_pos
+        self.ball_centre_pos_previous_previous = self.ball_centre_pos_previous
 
         pygame.event.get()  # we must do this to stop it freezing on windows :(
 
@@ -256,6 +285,8 @@ class MyPong:
         return observation, 0, self._running, self.score
 
     def update(self):
+        self.ball_velocity = rotate(self.spin, self.ball_velocity)
+
         ball_pos = [
             self.ball_centre_pos[i] + (self.ball_velocity[i] * TIME_STEP)
             for i in range(len(self.ball_velocity))
@@ -273,15 +304,6 @@ class MyPong:
             for i in range(len(self.right_paddle_velocity))
         ]
         self.right_paddle_center = right_paddle_pos
-
-    def get_debug_string(self, left_class, right_class):
-        debug_string = ""
-        if left_class is not None:
-            debug_string += "{}\n".format(left_class)
-        if right_class is not None:
-            debug_string += "{}\n".format(right_class)
-        debug_string = debug_string[:-1]
-        return debug_string
 
     def multiply_score(self, number):
         return {k: v * number for k, v in self.score.items()}

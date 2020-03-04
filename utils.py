@@ -4,6 +4,8 @@ import os
 import pickle
 import random
 
+import numpy as np
+
 from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GAME_WIDTH, WIN_SCORE
 
 
@@ -53,35 +55,47 @@ def calculate_gene_size():
     return total_genes
 
 
-def inference(ball_location, last_ball_location, me, enemy, model):
+def inference(ball_location, last_ball_location, last_last_ball_location, me, enemy, model):
     normalised_ball_location_x = ball_location[1] / GAME_WIDTH
     normalised_ball_location_y = ball_location[0] / GAME_HEIGHT
     normalised_last_ball_location_x = last_ball_location[1] / GAME_WIDTH
     normalised_last_ball_location_y = last_ball_location[0] / GAME_HEIGHT
+    normalised_last_last_ball_location_x = last_last_ball_location[1] / GAME_WIDTH
+    normalised_last_last_ball_location_y = last_last_ball_location[0] / GAME_HEIGHT
     normalised_me = me[0] / GAME_HEIGHT
     normalised_enemy = enemy[0] / GAME_HEIGHT
     predictions = model.run(
         [
             normalised_ball_location_x, normalised_ball_location_y,
             normalised_last_ball_location_x, normalised_last_ball_location_y,
+            normalised_last_last_ball_location_x, normalised_last_last_ball_location_y,
             normalised_me, normalised_enemy
         ])
     return predictions
 
 
-def get_actions(ball_location, last_ball_location, left_location, left_model, right_location, right_model):
+def get_actions(observations, left_model, right_model):
+    ball_location = observations[0]
+    last_ball_location = observations[1]
+    last_last_ball_location = observations[2]
+    left_location = observations[3]
+    right_location = observations[4]
+
     left_action = get_random_action3()
     right_action = get_random_action3()
-    if last_ball_location is None:
-        last_ball_location = ball_location
     if ball_location is not None:
         if left_location is not None:
             # here we are flipping X
             left_ball_loc = [ball_location[0], GAME_WIDTH - ball_location[1]]
             left_last_ball_loc = [last_ball_location[0], GAME_WIDTH - last_ball_location[1]]
-            left_action = inference(left_ball_loc, left_last_ball_loc, left_location, right_location, left_model)
+            left_last_last_ball_loc = [last_last_ball_location[0], GAME_WIDTH - last_last_ball_location[1]]
+            left_action = inference(
+                left_ball_loc, left_last_ball_loc, left_last_last_ball_loc, left_location, right_location, left_model
+            )
         if right_location is not None:
-            right_action = inference(ball_location, last_ball_location, right_location, left_location, right_model)
+            right_action = inference(
+                ball_location, last_ball_location, last_last_ball_location, right_location, left_location, right_model
+            )
     else:
         left_action = Direction.NOOP
         right_action = Direction.NOOP
@@ -100,3 +114,8 @@ def rotate(angle, point, origin=(0, 0)):
     qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
     qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
     return [qx, qy]
+
+
+# @np.vectorize
+def sigmoid(x):
+    return 1 / (1 + np.e ** -x)

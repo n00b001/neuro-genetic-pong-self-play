@@ -1,6 +1,5 @@
 import time
 
-import numpy as np
 import scoop
 from deap import algorithms
 from deap import tools
@@ -51,7 +50,6 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
         "player1": Direction.NOOP,
         "player2": Direction.NOOP
     }
-    last_ball_location = None
     st = time.time()
     while True:
         observation, _, is_running, score_info = env.step(actions)
@@ -61,9 +59,8 @@ def perform_episode(env, left_model, right_model, render, score_multiplier):
             right_model.set_score(score_info)
 
         left_action, right_action = get_actions(
-            observation[0], last_ball_location, observation[1], left_model, observation[2], right_model
+            observation, left_model, right_model
         )
-        last_ball_location = observation[0]
 
         actions["player1"] = left_action
         actions["player2"] = right_action

@@ -7,6 +7,7 @@ from scipy.stats import truncnorm
 # @np.vectorize
 # alternative activation function
 from consts import Direction, NETWORK_SHAPE, BIAS
+from utils import sigmoid
 
 
 def relu(x):
@@ -20,11 +21,6 @@ def relu_derivation(x):
         return 0
     else:
         return 1
-
-
-# @np.vectorize
-def sigmoid(x):
-    return 1 / (1 + np.e ** -x)
 
 
 activation_function = sigmoid

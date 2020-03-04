@@ -31,10 +31,16 @@ class RandomHardcodedAi:
         return "RHCAI:{:.2f}".format(self.random_thresh)
 
 
+# [
+#     normalised_ball_location_x, normalised_ball_location_y,
+#     normalised_last_ball_location_x, normalised_last_ball_location_y,
+#     normalised_last_last_ball_location_x, normalised_last_last_ball_location_y,
+#     normalised_me, normalised_enemy
+# ])
 def up_down_noop_logic(input_vector):
-    if input_vector[1] < input_vector[4] - ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
+    if input_vector[1] < input_vector[6] - ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
         return_val = Direction.UP
-    elif input_vector[1] > input_vector[4] + ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
+    elif input_vector[1] > input_vector[6] + ((PADDLE_HEIGHT / 4.0) / GAME_HEIGHT):
         return_val = Direction.DOWN
     else:
         return_val = Direction.NOOP
