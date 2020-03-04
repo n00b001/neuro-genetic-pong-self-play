@@ -17,7 +17,7 @@ LAST_HIT_TIMEOUT_THRESH = 1_000
 
 # I want some depth to try and have higher abstract thoughts
 NETWORK_SHAPE = [
-    6, 4, len(Direction)
+    8, 4, len(Direction)
 ]
 BIAS = True
 
