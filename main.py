@@ -1,6 +1,5 @@
 import time
 
-import scoop
 from deap import algorithms
 from deap import tools
 
@@ -119,18 +118,8 @@ def main():
     save_checkpoint(ga.population, hall_of_fame)
     del log
 
-
-# GAME_1_PLAYER.start()
-# GAME_2_PLAYER.start(
-
 ENV = MyPong(RENDER)
 toolbox.register("evaluate", evaluate)
-try:
-    from gym.envs.classic_control import rendering
-
-    viewer = rendering.SimpleImageViewer()
-except Exception as e:
-    scoop.logger.error(e)
 
 if __name__ == '__main__':
     main()
