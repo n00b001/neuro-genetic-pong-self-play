@@ -13,11 +13,11 @@ class Direction(Enum):
 FPS = 60
 
 TOTAL_TIMEOUT_THRESH = 20_000
-LAST_HIT_TIMEOUT_THRESH = 1_000
+LAST_HIT_TIMEOUT_THRESH = 3_000
 
 # I want some depth to try and have higher abstract thoughts
 NETWORK_SHAPE = [
-    8, 4, len(Direction)
+    8, 4, 4, len(Direction)
 ]
 BIAS = True
 
@@ -30,10 +30,10 @@ TOURNAMENT_SIZE = min(POPULATION_SIZE, POPULATION_SIZE // 4)
 
 RENDER = False
 
-WIN_SCORE = 500
+WIN_SCORE = 5
 PADDLE_HIT_SCORE = 0.5
 POINT_SCORE = 1.0
-BONUS_SCALAR = 50.0
+BONUS_SCALAR = 800.0
 SCORE_DECAY = 0.99999
 
 BALL_SPEED_UPPER = 0.2

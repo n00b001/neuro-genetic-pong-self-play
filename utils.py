@@ -5,6 +5,7 @@ import pickle
 import random
 
 import numpy as np
+from scipy.special import expit
 
 from consts import Direction, NETWORK_SHAPE, BIAS, BONUS_SCALAR, GAME_HEIGHT, GAME_WIDTH, WIN_SCORE
 
@@ -118,4 +119,4 @@ def rotate(angle, point, origin=(0, 0)):
 
 # @np.vectorize
 def sigmoid(x):
-    return 1 / (1 + np.e ** -x)
+    return expit([x])

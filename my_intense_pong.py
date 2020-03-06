@@ -35,6 +35,7 @@ class MyPong:
         self.left_frames_since_last_hit = 0.0
         self.right_frames_since_last_hit = 0.0
         self.spin = 0.0
+        self.trail = []
 
     def on_init(self):
         pygame.init()
@@ -65,7 +66,7 @@ class MyPong:
 
         self.ball_velocity = rotate(ball_direction, [BALL_SPEED, 0.0])
 
-    def ball_paddle_redirect(self, location):
+    def ball_paddle_redirect(self, location, skill_bonus):
         collision_vet = [
             self.ball_centre_pos[0] - location[0],
             self.ball_centre_pos[1] - location[1]
@@ -80,7 +81,7 @@ class MyPong:
 
         # the 1.6 here has been tested - it is the fastest the ball can go before it goes through the paddles
         # use 1.4 to be safe
-        ball_speed = min(float(BALL_SPEED + self.ball_speed_upper), BALL_SIZE[0] * 1.4)
+        ball_speed = min(float(BALL_SPEED + (self.ball_speed_upper + skill_bonus)), BALL_SIZE[0] * 1.4)
         self.ball_velocity = rotate(collision_angle, [ball_speed, 0.0])
 
     def get_velocity(self, control):
@@ -112,10 +113,14 @@ class MyPong:
             self.ball_velocity[1] = -abs(self.ball_velocity[1])
             self.ball_centre_pos[1] = GAME_HEIGHT - (BALL_SIZE[1] / 2.0)
             collide = True
+
         if self.ball.colliderect(self.left_paddle):
             self.left_frames_since_last_hit = 0.0
+            skill_bonus = 0.0
+            if self.ball_centre_pos[0] - (BALL_SIZE[0] / 2.0) < self.left_paddle_center[0]:
+                skill_bonus = 10.0
             self.ball_centre_pos[0] = self.left_paddle_center[0] + (BALL_SIZE[0] / 2.0) + (PADDLE_WIDTH / 2.0)
-            self.ball_paddle_redirect(self.left_paddle_center)
+            self.ball_paddle_redirect(self.left_paddle_center, skill_bonus)
             self.spin = self.calculate_spin(self.left_paddle_velocity[1])
             # self.ball_velocity[1] -
             self.score["score1"] += PADDLE_HIT_SCORE
@@ -123,8 +128,11 @@ class MyPong:
             collide = True
         elif self.ball.colliderect(self.right_paddle):
             self.right_frames_since_last_hit = 0.0
+            skill_bonus = 0.0
+            if self.ball_centre_pos[0] + (BALL_SIZE[0] / 2.0) > self.right_paddle_center[0]:
+                skill_bonus = 10.0
             self.ball_centre_pos[0] = self.right_paddle_center[0] - (BALL_SIZE[0] / 2.0) - (PADDLE_WIDTH / 2.0)
-            self.ball_paddle_redirect(self.right_paddle_center)
+            self.ball_paddle_redirect(self.right_paddle_center, skill_bonus)
             self.spin = self.calculate_spin(self.right_paddle_velocity[1])
             self.score["score2"] += PADDLE_HIT_SCORE
             self.score["score1"] -= PADDLE_HIT_SCORE
@@ -171,9 +179,12 @@ class MyPong:
             self.ball_speed_upper = 0.0
 
     def restart_ball(self):
+        self.trail = []
         self.spin = 0.0
         self.ball_centre_pos[0] = GAME_WIDTH / 2.0
         self.ball_centre_pos[1] = GAME_HEIGHT / 2.0
+        self.ball_centre_pos_previous = self.ball_centre_pos
+        self.ball_centre_pos_previous_previous = self.ball_centre_pos_previous
         self.randomise_ball_vel()
 
     def restart_paddles(self):
@@ -217,15 +228,18 @@ class MyPong:
                 GAME_HEIGHT - 10,
                 self.debug_font
             )
-        self.draw_string(
-            "{}".format(self.spin),
-            GAME_WIDTH / 2.0,
-            GAME_HEIGHT / 2.0,
-            self.debug_font
-        )
+        # self.draw_string(
+        #     "{}".format(self.spin),
+        #     GAME_WIDTH / 2.0,
+        #     GAME_HEIGHT / 2.0,
+        #     self.debug_font
+        # )
 
         pygame.draw.rect(self.display_surf, LEFT_GUY_COLOUR, self.left_paddle)
         pygame.draw.rect(self.display_surf, RIGHT_GUY_COLOUR, self.right_paddle)
+
+        if len(self.trail) > 2:
+            pygame.draw.lines(self.display_surf, BALL_COLOUR, False, self.trail, 2)
         pygame.draw.rect(self.display_surf, BALL_COLOUR, self.ball)
         pygame.display.flip()
 
@@ -248,16 +262,22 @@ class MyPong:
     """
 
     def step(self, control):
+        if self.render:
+            self.trail.append(self.ball_centre_pos)
+            if len(self.trail) > 100:
+                self.trail.pop(0)
+
         self.total_frames += 1.0
         self.left_frames_since_last_hit += 1.0
         self.right_frames_since_last_hit += 1.0
         self.spin = self.spin * 0.999
+
         self.score = self.multiply_score(SCORE_DECAY)
         self.left_paddle_velocity = self.get_velocity(control["player1"])
         self.right_paddle_velocity = self.get_velocity(control["player2"])
 
-        self.update()
         self.collide_checks()
+        self.update()
         self.score_logic()
 
         self.left_paddle.center = self.left_paddle_center
@@ -271,8 +291,6 @@ class MyPong:
             [self.left_paddle_center[1], self.left_paddle_center[0]],
             [self.right_paddle_center[1], self.right_paddle_center[0]]
         ]
-        self.ball_centre_pos_previous = self.ball_centre_pos
-        self.ball_centre_pos_previous_previous = self.ball_centre_pos_previous
 
         pygame.event.get()  # we must do this to stop it freezing on windows :(
 
@@ -291,6 +309,8 @@ class MyPong:
             self.ball_centre_pos[i] + (self.ball_velocity[i] * TIME_STEP)
             for i in range(len(self.ball_velocity))
         ]
+        self.ball_centre_pos_previous_previous = self.ball_centre_pos_previous
+        self.ball_centre_pos_previous = self.ball_centre_pos
         self.ball_centre_pos = ball_pos
 
         left_paddle_pos = [
