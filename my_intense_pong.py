@@ -38,12 +38,9 @@ class MyPong:
         self.trail = []
 
     def on_init(self):
-        # pygame.init()
+        pygame.font.init()
         if self.should_render:
             pygame.display.init()
-        pygame.font.init()
-
-        if self.should_render:
             self.display_surf = pygame.display.set_mode((int(GAME_WIDTH), int(GAME_HEIGHT)))
         else:
             self.display_surf = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
