@@ -38,7 +38,11 @@ class MyPong:
         self.trail = []
 
     def on_init(self):
-        pygame.init()
+        # pygame.init()
+        if self.should_render:
+            pygame.display.init()
+        pygame.font.init()
+
         if self.should_render:
             self.display_surf = pygame.display.set_mode((int(GAME_WIDTH), int(GAME_HEIGHT)))
         else:
@@ -292,7 +296,10 @@ class MyPong:
             [self.right_paddle_center[1], self.right_paddle_center[0]]
         ]
 
-        pygame.event.get()  # we must do this to stop it freezing on windows :(
+        try:
+            pygame.event.get()  # we must do this to stop it freezing on windows :(
+        except:
+            pass
 
         if self.total_frames > TOTAL_TIMEOUT_THRESH:
             self._running = False
